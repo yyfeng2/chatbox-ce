@@ -93,8 +93,8 @@ We do not publish pre-built installers here (no official backend / hosting). To 
 
 1. **Clone the repository**
    ```bash
-   git clone <your-repository-url>
-   cd <repository-name>
+   git clone https://github.com/yyfeng2/chatbox-ce.git
+   cd chatbox-ce
    ```
 
 2. **Install dependencies**

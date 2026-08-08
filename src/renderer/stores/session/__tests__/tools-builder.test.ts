@@ -1,0 +1,1014 @@
+import { beforeEach, describe, expect, test, vi } from 'vitest'
+
+// ── Hoisted mocks (environment + modules) ──────────────────────────────────
+
+const {
+  discoverSkillsMock,
+  installFromSandboxMock,
+  loadSkillMock,
+  settingsState,
+  getSettingsMock,
+  isProMock,
+  webSearchProvider,
+  buildCodeExecutionToolsMock,
+  getSessionAttachmentRagToolSetMock,
+  skillsChangedListeners,
+  requestUserExecApprovalMock,
+  cancelUserExecMock,
+  userExecMock,
+} = vi.hoisted(() => ({
+  discoverSkillsMock: vi.fn(),
+  installFromSandboxMock: vi.fn(),
+  loadSkillMock: vi.fn(),
+  settingsState: {
+    licenseKey: undefined as string | undefined,
+    licenseDetail: undefined as unknown,
+    licensePlanName: undefined as string | undefined,
+    licenseActivationMethod: undefined as 'login' | 'manual' | undefined,
+    hasExpiredLicense: false,
+  },
+  getSettingsMock: vi.fn(),
+  isProMock: vi.fn(),
+  webSearchProvider: { current: 'bing' },
+  buildCodeExecutionToolsMock: vi.fn(),
+  getSessionAttachmentRagToolSetMock: vi.fn(),
+  skillsChangedListeners: new Set<() => void>(),
+  requestUserExecApprovalMock: vi.fn(),
+  cancelUserExecMock: vi.fn(),
+  userExecMock: vi.fn(),
+}))
+
+vi.hoisted(() => {
+  const storage = {
+    getItem: () => null,
+    setItem: () => undefined,
+    removeItem: () => undefined,
+    clear: () => undefined,
+  }
+  const windowMock: Record<string, unknown> = {
+    electronAPI: undefined,
+    localStorage: storage,
+  }
+  ;(globalThis as unknown as { window: Record<string, unknown>; localStorage: typeof storage }).window = windowMock
+  ;(globalThis as unknown as { window: Record<string, unknown>; localStorage: typeof storage }).localStorage = storage
+  return {}
+})
+
+vi.mock('@/platform', () => ({
+  default: { type: 'web' },
+}))
+
+const trackAgentModeFullAccessBypassMock = vi.fn()
+vi.mock('@/analytics/agent-mode', () => ({
+  trackAgentModeFullAccessBypass: (...args: unknown[]) => trackAgentModeFullAccessBypassMock(...args),
+}))
+
+vi.mock('@/packages/mcp/controller', () => ({
+  mcpController: {
+    getAvailableTools: () => ({
+      mcp_tool: { execute: async () => ({}) },
+    }),
+  },
+}))
+
+vi.mock('@/packages/skills/controller', () => ({
+  subscribeSkillsChanged: (listener: () => void) => {
+    skillsChangedListeners.add(listener)
+    return () => skillsChangedListeners.delete(listener)
+  },
+  skillsController: {
+    discoverSkills: discoverSkillsMock,
+    installFromSandbox: installFromSandboxMock,
+    loadSkill: loadSkillMock,
+    userExec: userExecMock,
+    cancelUserExec: cancelUserExecMock,
+  },
+}))
+
+vi.mock('@/packages/user-exec-approval', () => ({
+  requestUserExecApproval: requestUserExecApprovalMock,
+}))
+
+vi.mock('@/stores/settingsStore', () => ({
+  settingsStore: {
+    getState: () => ({
+      ...settingsState,
+      getSettings: getSettingsMock,
+    }),
+    setState: (patch: Record<string, unknown>) => {
+      Object.assign(settingsState, patch)
+    },
+  },
+}))
+
+vi.mock('@/packages/remote', () => ({
+  getLicenseDetailRealtime: vi.fn(),
+}))
+
+vi.mock('@/stores/settingActions', () => ({
+  getExtensionSettings: () => ({
+    webSearch: {
+      provider: webSearchProvider.current,
+    },
+  }),
+  isPro: isProMock,
+}))
+
+vi.mock('@/packages/model-calls/toolsets/code-execution', () => ({
+  buildCodeExecutionTools: buildCodeExecutionToolsMock,
+}))
+
+vi.mock('@/packages/model-calls/toolsets/web-search', () => {
+  const { tool } = require('ai')
+  const { z } = require('zod')
+  return {
+    default: { description: 'web search toolset' },
+    getToolSetDescription: ({ includeParseLink }: { includeParseLink: boolean }) =>
+      includeParseLink ? 'web search toolset\n## parse_link' : 'web search toolset',
+    webSearchTool: tool({ description: 'web_search', inputSchema: z.object({}), execute: async () => ({}) }),
+    parseLinkTool: tool({ description: 'parse_link', inputSchema: z.object({}), execute: async () => ({}) }),
+  }
+})
+
+vi.mock('@/packages/model-calls/toolsets/file', () => ({
+  default: {
+    description: 'file toolset',
+    tools: { read_file: { execute: async () => ({}) } },
+  },
+}))
+
+vi.mock('@/packages/model-calls/toolsets/filesystem', () => ({
+  buildFilesystemTools: () => ({
+    description: 'filesystem toolset',
+    tools: {
+      list_files: { execute: async () => ({}) },
+      search_files: { execute: async () => ({}) },
+      write_file: { execute: async () => ({}) },
+      edit_file: { execute: async () => ({}) },
+    },
+  }),
+}))
+
+vi.mock('@/packages/model-calls/toolsets/knowledge-base', () => ({
+  getToolSet: async () => ({
+    description: 'kb toolset',
+    tools: { kb_search: { execute: async () => ({}) } },
+  }),
+}))
+
+vi.mock('@/packages/model-calls/toolsets/session-attachment-rag', () => ({
+  getToolSet: getSessionAttachmentRagToolSetMock,
+}))
+
+import type { ModelInterface } from '@shared/models/types'
+import type { SandboxProvider } from '@shared/sandbox-provider'
+import type { Message } from '@shared/types'
+import { type BuildToolsOptions, buildToolsForSession } from '../tools-builder'
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function createMockModel(overrides?: Partial<ModelInterface>): ModelInterface {
+  return {
+    isSupportToolUse: vi.fn().mockReturnValue(true),
+    isSupportVision: vi.fn().mockReturnValue(true),
+    isSupportSystemMessage: vi.fn().mockReturnValue(true),
+    ...overrides,
+  } as unknown as ModelInterface
+}
+
+function createMockSandboxProvider(): SandboxProvider {
+  return {
+    type: 'cloud',
+    init: vi.fn().mockResolvedValue({ success: true }),
+    exec: vi.fn().mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' }),
+    copyFileIn: vi.fn().mockResolvedValue(undefined),
+    checkAvailability: vi.fn().mockResolvedValue({ available: true }),
+    resolveWorkingDirectory: vi.fn().mockResolvedValue(null),
+    destroy: vi.fn(),
+  } as unknown as SandboxProvider
+}
+
+async function toModelOutput(tool: unknown, output: unknown) {
+  const mapper = tool as {
+    toModelOutput: (options: { toolCallId: string; input: unknown; output: unknown }) => Promise<unknown> | unknown
+  }
+  return await mapper.toModelOutput({ toolCallId: 'tool-call-id', input: {}, output })
+}
+
+const sandboxToolNames = [
+  'sandbox_bash',
+  'sandbox_read',
+  'sandbox_write',
+  'sandbox_edit',
+  'sandbox_grep',
+  'sandbox_ls',
+  'sandbox_find',
+]
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  for (const listener of skillsChangedListeners) {
+    listener()
+  }
+  getSettingsMock.mockReturnValue({
+    skills: { enabledSkillNames: ['test-skill'] },
+  })
+  settingsState.licenseKey = undefined
+  settingsState.licenseDetail = undefined
+  settingsState.licensePlanName = undefined
+  settingsState.licenseActivationMethod = undefined
+  settingsState.hasExpiredLicense = false
+  webSearchProvider.current = 'bing'
+  isProMock.mockReturnValue(true)
+  buildCodeExecutionToolsMock.mockReturnValue({
+    description: 'code execution toolset',
+    tools: {
+      code_execution: { execute: async () => ({}) },
+      parse_file: { execute: async () => ({}) },
+    },
+  })
+  getSessionAttachmentRagToolSetMock.mockResolvedValue({
+    description: 'session attachment rag toolset',
+    tools: { query_session_attachment: { execute: async () => ({}) } },
+  })
+  requestUserExecApprovalMock.mockResolvedValue('ai')
+  userExecMock.mockResolvedValue({ success: true, exitCode: 0, stdout: 'ok', stderr: '' })
+  cancelUserExecMock.mockResolvedValue({ killed: true })
+  installFromSandboxMock.mockResolvedValue({ success: true, skillName: 'new-skill' })
+  discoverSkillsMock.mockResolvedValue([
+    { name: 'test-skill', description: 'A test skill' },
+    { name: 'chatbox-product-info', description: 'Chatbox product info' },
+    { name: 'disabled-skill', description: 'Disabled' },
+  ])
+  loadSkillMock.mockResolvedValue({
+    metadata: {},
+    body: '# Skill instructions',
+    skillRoot: '/mock/builtin-skills/test-skill',
+    files: ['references/checklist.md', 'scripts/validate.mjs'],
+  })
+})
+
+// ── Tests ──────────────────────────────────────────────────────────────────
+
+describe('buildToolsForSession', () => {
+  test('agentMode="off" — no skills tools, no sandbox tools in result', async () => {
+    const model = createMockModel()
+    const options: BuildToolsOptions = {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'off',
+    }
+    const result = await buildToolsForSession(model, options)
+
+    expect(result.tools.load_skill).toBeUndefined()
+    expect(result.tools.chatbox_cli).toBeUndefined()
+    expect(result.tools.user_exec).toBeUndefined()
+    expect(result.tools.mcp_tool).toBeUndefined()
+    expect(result.instructions).not.toContain('## Skills')
+    expect(result.instructions).not.toContain('Chatbox Account CLI')
+    expect(result.instructions).not.toContain('## Tool-use Communication')
+    expect(discoverSkillsMock).not.toHaveBeenCalled()
+    for (const name of sandboxToolNames) {
+      expect(result.tools[name]).toBeUndefined()
+    }
+  })
+
+  test('agentMode="off" exposes selected Knowledge Base without Work Mode tools', async () => {
+    const model = createMockModel()
+    const result = await buildToolsForSession(model, {
+      webBrowsing: false,
+      knowledgeBase: { id: 1, name: 'Product Docs' },
+      messages: [],
+      agentMode: 'off',
+    })
+
+    expect(result.tools.kb_search).toBeDefined()
+    expect(result.instructions).toContain('kb toolset')
+    expect(result.tools.mcp_tool).toBeUndefined()
+    expect(result.tools.load_skill).toBeUndefined()
+    expect(result.tools.user_exec).toBeUndefined()
+    expect(result.tools.list_files).toBeUndefined()
+    expect(result.tools.code_execution).toBeUndefined()
+    expect(discoverSkillsMock).not.toHaveBeenCalled()
+  })
+
+  test('agentMode="off" can combine Web Search and Knowledge Base', async () => {
+    const model = createMockModel()
+    const result = await buildToolsForSession(model, {
+      webBrowsing: true,
+      knowledgeBase: { id: 1, name: 'Product Docs' },
+      messages: [],
+      agentMode: 'off',
+    })
+
+    expect(result.tools.web_search).toBeDefined()
+    expect(result.tools.kb_search).toBeDefined()
+    expect(result.tools.mcp_tool).toBeUndefined()
+    expect(result.tools.load_skill).toBeUndefined()
+  })
+
+  test('agentMode="on" — has all tools', async () => {
+    const model = createMockModel()
+    const provider = createMockSandboxProvider()
+    const options: BuildToolsOptions = {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+      codeExecution: {
+        sessionId: 'session-1',
+        provider,
+        files: [],
+      },
+    }
+
+    const result = await buildToolsForSession(model, options)
+
+    expect(result.tools.load_skill).toBeDefined()
+    expect(result.tools.mcp_tool).toBeDefined()
+    expect(result.tools.kb_search).toBeUndefined()
+    // Sandbox tools NOT present when code_execution is active
+    for (const name of sandboxToolNames) {
+      expect(result.tools[name]).toBeUndefined()
+    }
+    expect(result.tools.code_execution).toBeDefined()
+  })
+
+  test('agentMode="on" keeps Knowledge Base alongside Work Mode tools', async () => {
+    const model = createMockModel()
+    const result = await buildToolsForSession(model, {
+      webBrowsing: false,
+      knowledgeBase: { id: 1, name: 'Product Docs' },
+      messages: [],
+      agentMode: 'on',
+    })
+
+    expect(result.tools.kb_search).toBeDefined()
+    expect(result.tools.mcp_tool).toBeDefined()
+    expect(result.tools.load_skill).toBeDefined()
+    expect(result.tools.list_files).toBeDefined()
+  })
+
+  test('normalizes Windows paths and prefers PowerShell without redundant directory changes', async () => {
+    const model = createMockModel()
+    const provider = createMockSandboxProvider()
+    vi.mocked(provider.resolveWorkingDirectory).mockResolvedValue('C:\\Users\\themez\\workspace\\chatbox-pro')
+
+    const result = await buildToolsForSession(model, {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+      sessionSettings: { workingDirectories: ['D:\\Projects\\shared folder'] },
+      codeExecution: {
+        sessionId: 'session-1',
+        provider,
+        files: [],
+      },
+    })
+
+    expect(result.instructions).toContain('C:/Users/themez/workspace/chatbox-pro')
+    expect(result.instructions).toContain('D:/Projects/shared folder')
+    expect(result.instructions).not.toContain('C:\\Users\\themez')
+    expect(result.instructions).not.toContain('no approval needed')
+    expect(result.instructions).toContain('The host validates each binding before use')
+    expect(result.instructions).toContain('rejected bindings follow the normal approval flow')
+    expect(result.instructions).toContain('Do not prepend `cd <working-directory>`')
+    expect(result.instructions).toContain(
+      'On Windows, prefer PowerShell for terminal commands and native filesystem paths'
+    )
+    expect(result.instructions).toContain('do not prepend `Set-Location <working-directory>`')
+    expect(result.instructions).toContain('Use Bash only for POSIX-specific scripts')
+    expect(result.instructions).toContain('When using Bash on Windows, use Unix shell syntax and forward slashes')
+    expect(result.instructions).toContain('For files inside the working directory, prefer relative paths')
+    expect(result.instructions).toContain('Use an absolute path when the target is outside the working directory')
+    expect(result.instructions).toContain(
+      'Git Bash accepts `C:/Users/name/...`, while WSL uses `/mnt/c/Users/name/...`'
+    )
+    expect(result.instructions).toContain('structured file tools for host paths outside it')
+  })
+
+  test('webBrowsing=true exposes parse_link when configured search provider supports it', async () => {
+    webSearchProvider.current = 'tavily'
+    const model = createMockModel()
+    const result = await buildToolsForSession(model, {
+      webBrowsing: true,
+      messages: [],
+      agentMode: 'off',
+    })
+
+    expect(result.tools.web_search).toBeDefined()
+    expect(result.tools.parse_link).toBeDefined()
+    expect(result.instructions).toContain('## Tool-use Communication')
+    expect(result.instructions).toContain('one short visible sentence')
+    expect(result.instructions).toContain("Use the user's language for this sentence.")
+    expect(result.instructions).toContain('trivial single-tool lookups')
+    expect(result.instructions).toContain('## parse_link')
+  })
+
+  test('webBrowsing=true does not expose parse_link when configured search provider does not support it', async () => {
+    webSearchProvider.current = 'bing'
+    const model = createMockModel()
+
+    const result = await buildToolsForSession(model, {
+      webBrowsing: true,
+      messages: [],
+      agentMode: 'off',
+    })
+
+    expect(result.tools.web_search).toBeDefined()
+    expect(result.tools.parse_link).toBeUndefined()
+    expect(result.instructions).not.toContain('## parse_link')
+  })
+
+  test('agentMode="on" without codeExecution — load_skill only, no code-exec tools', async () => {
+    const model = createMockModel()
+    const options: BuildToolsOptions = {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+      // no codeExecution
+    }
+
+    const result = await buildToolsForSession(model, options)
+
+    expect(result.tools.load_skill).toBeDefined()
+
+    // Low-level sandbox_* tools are not exposed; code_execution is the supported sandbox surface.
+    for (const name of sandboxToolNames) {
+      expect(result.tools[name]).toBeUndefined()
+    }
+
+    // But code execution tools are NOT present (no codeExecution option)
+    expect(result.tools.code_execution).toBeUndefined()
+    expect(result.tools.parse_file).toBeUndefined()
+    expect(result.instructions).toContain('## Tool-use Communication')
+    expect(buildCodeExecutionToolsMock).not.toHaveBeenCalled()
+  })
+
+  test('resets discovered skills cache when skills change', async () => {
+    const model = createMockModel()
+    const options: BuildToolsOptions = {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+    }
+
+    getSettingsMock.mockReturnValue({
+      skills: { enabledSkillNames: ['test-skill', 'new-skill'] },
+    })
+    discoverSkillsMock
+      .mockResolvedValueOnce([{ name: 'test-skill', description: 'A test skill' }])
+      .mockResolvedValueOnce([{ name: 'new-skill', description: 'A newly discovered skill' }])
+
+    const first = await buildToolsForSession(model, options)
+    expect(first.instructions).toContain('test-skill')
+
+    const cached = await buildToolsForSession(model, options)
+    expect(cached.instructions).toContain('test-skill')
+    expect(discoverSkillsMock).toHaveBeenCalledTimes(1)
+
+    for (const listener of skillsChangedListeners) {
+      listener()
+    }
+
+    const refreshed = await buildToolsForSession(model, options)
+    expect(refreshed.instructions).toContain('new-skill')
+    expect(discoverSkillsMock).toHaveBeenCalledTimes(2)
+  })
+
+  test('agentFullAccess=true skips user_exec approval', async () => {
+    const model = createMockModel()
+    const result = await buildToolsForSession(model, {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+      sessionSettings: { agentFullAccess: true },
+    })
+    if (!result.tools.user_exec.execute) throw new Error('user_exec execute missing')
+
+    const executeResult = await result.tools.user_exec.execute({ command: 'touch /tmp/full-access' }, {
+      toolCallId: 'tool-call-1',
+      messages: [],
+    } as never)
+
+    expect(requestUserExecApprovalMock).not.toHaveBeenCalled()
+    expect(userExecMock).toHaveBeenCalledWith('touch /tmp/full-access', {
+      sessionId: undefined,
+      toolCallId: 'tool-call-1',
+      approvalSource: 'full_access',
+    })
+    expect(executeResult).toMatchObject({ success: true, exitCode: 0, stdout: 'ok', stderr: '' })
+    expect(trackAgentModeFullAccessBypassMock).toHaveBeenCalledWith({ tool: 'user_exec' })
+  })
+
+  test('agentFullAccess=false requests user_exec approval', async () => {
+    const model = createMockModel()
+    const result = await buildToolsForSession(model, {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+      sessionSettings: { agentFullAccess: false },
+    })
+    if (!result.tools.user_exec.execute) throw new Error('user_exec execute missing')
+
+    await result.tools.user_exec.execute({ command: 'touch /tmp/needs-approval' }, {
+      toolCallId: 'tool-call-2',
+      messages: [],
+    } as never)
+
+    expect(requestUserExecApprovalMock).toHaveBeenCalledWith(
+      'tool-call-2',
+      'touch /tmp/needs-approval',
+      expect.any(Object),
+      undefined
+    )
+    expect(userExecMock).toHaveBeenCalledWith('touch /tmp/needs-approval', {
+      sessionId: undefined,
+      toolCallId: 'tool-call-2',
+      approvalSource: 'ai',
+    })
+    expect(trackAgentModeFullAccessBypassMock).not.toHaveBeenCalled()
+  })
+
+  test('records whitelist auto-approval as the execution source', async () => {
+    requestUserExecApprovalMock.mockResolvedValueOnce('whitelist')
+    const model = createMockModel()
+    const result = await buildToolsForSession(model, {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+      sessionSettings: { agentFullAccess: false },
+    })
+    if (!result.tools.user_exec.execute) throw new Error('user_exec execute missing')
+
+    await result.tools.user_exec.execute({ command: 'pwd' }, {
+      toolCallId: 'tool-call-whitelist',
+      messages: [],
+    } as never)
+
+    expect(userExecMock).toHaveBeenCalledWith('pwd', {
+      sessionId: undefined,
+      toolCallId: 'tool-call-whitelist',
+      approvalSource: 'whitelist',
+    })
+  })
+
+  test('records resumed user approval as the execution source', async () => {
+    const model = createMockModel()
+    const result = await buildToolsForSession(model, {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+      sessionSettings: { agentFullAccess: false },
+    })
+    if (!result.tools.user_exec.execute) throw new Error('user_exec execute missing')
+
+    await result.tools.user_exec.execute({ command: 'touch /tmp/user-approved' }, {
+      toolCallId: 'tool-call-user-approved',
+      messages: [],
+      approved: true,
+    } as never)
+
+    expect(requestUserExecApprovalMock).not.toHaveBeenCalled()
+    expect(userExecMock).toHaveBeenCalledWith('touch /tmp/user-approved', {
+      sessionId: undefined,
+      toolCallId: 'tool-call-user-approved',
+      approvalSource: 'user',
+    })
+  })
+
+  test('deduplicates repeated user_exec calls with the same toolCallId', async () => {
+    const model = createMockModel()
+    const result = await buildToolsForSession(model, {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+      sessionSettings: { agentFullAccess: false },
+    })
+    if (!result.tools.user_exec.execute) throw new Error('user_exec execute missing')
+
+    const context = { toolCallId: 'tool-call-repeated', messages: [] } as never
+    const first = result.tools.user_exec.execute({ command: 'touch /tmp/once' }, context)
+    const second = result.tools.user_exec.execute({ command: 'touch /tmp/once' }, context)
+
+    await expect(Promise.all([first, second])).resolves.toEqual([
+      { success: true, exitCode: 0, stdout: 'ok', stderr: '' },
+      { success: true, exitCode: 0, stdout: 'ok', stderr: '' },
+    ])
+    expect(requestUserExecApprovalMock).toHaveBeenCalledTimes(1)
+    expect(userExecMock).toHaveBeenCalledTimes(1)
+  })
+
+  test('rejects a reused user_exec toolCallId with a different command', async () => {
+    const model = createMockModel()
+    const result = await buildToolsForSession(model, {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+      sessionSettings: { agentFullAccess: false },
+    })
+    if (!result.tools.user_exec.execute) throw new Error('user_exec execute missing')
+
+    const context = { toolCallId: 'tool-call-reused', messages: [] } as never
+    await result.tools.user_exec.execute({ command: 'touch /tmp/first' }, context)
+
+    await expect(result.tools.user_exec.execute({ command: 'touch /tmp/second' }, context)).rejects.toThrow(
+      'was reused with a different command'
+    )
+    expect(requestUserExecApprovalMock).toHaveBeenCalledTimes(1)
+    expect(userExecMock).toHaveBeenCalledTimes(1)
+  })
+
+  test('does not execute user_exec when generation is aborted during approval', async () => {
+    let finishApproval: ((approvalSource: 'ai') => void) | undefined
+    requestUserExecApprovalMock.mockImplementationOnce(
+      () =>
+        new Promise<'ai'>((resolve) => {
+          finishApproval = resolve
+        })
+    )
+    const model = createMockModel()
+    const result = await buildToolsForSession(model, {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+      sessionSettings: { agentFullAccess: false },
+    })
+    if (!result.tools.user_exec.execute) throw new Error('user_exec execute missing')
+
+    const controller = new AbortController()
+    const execution = result.tools.user_exec.execute({ command: 'touch /tmp/aborted' }, {
+      toolCallId: 'tool-call-aborted',
+      messages: [],
+      abortSignal: controller.signal,
+    } as never)
+    await vi.waitFor(() => expect(requestUserExecApprovalMock).toHaveBeenCalledTimes(1))
+
+    controller.abort()
+    finishApproval?.('ai')
+
+    await expect(execution).rejects.toMatchObject({ name: 'AbortError' })
+    expect(userExecMock).not.toHaveBeenCalled()
+  })
+
+  test('cancels user_exec after host execution has started', async () => {
+    let finishExecution:
+      | ((result: { success: boolean; exitCode: number; stdout: string; stderr: string; cancelled: boolean }) => void)
+      | undefined
+    userExecMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishExecution = resolve
+        })
+    )
+    const model = createMockModel()
+    const result = await buildToolsForSession(model, {
+      sessionId: 'session-cancel',
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+      sessionSettings: { agentFullAccess: true },
+    })
+    if (!result.tools.user_exec.execute) throw new Error('user_exec execute missing')
+
+    const controller = new AbortController()
+    const execution = result.tools.user_exec.execute({ command: 'sleep 30' }, {
+      toolCallId: 'tool-call-running',
+      messages: [],
+      abortSignal: controller.signal,
+    } as never)
+    await vi.waitFor(() => expect(userExecMock).toHaveBeenCalledTimes(1))
+
+    controller.abort()
+    expect(cancelUserExecMock).toHaveBeenCalledWith({
+      sessionId: 'session-cancel',
+      toolCallId: 'tool-call-running',
+    })
+    finishExecution?.({ success: false, exitCode: 130, stdout: 'partial\n', stderr: '', cancelled: true })
+
+    await expect(execution).resolves.toEqual({
+      success: false,
+      exitCode: 130,
+      stdout: 'partial\n',
+      stderr: '',
+      cancelled: true,
+    })
+  })
+})
+
+describe('load_skill tool', () => {
+  test('calls onAgentModeActivated callback', async () => {
+    const model = createMockModel()
+    const onAgentModeActivated = vi.fn()
+    const options: BuildToolsOptions = {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+      onAgentModeActivated,
+    }
+
+    const result = await buildToolsForSession(model, options)
+
+    // Execute the load_skill tool
+    const loadSkillTool = result.tools.load_skill
+    expect(loadSkillTool).toBeDefined()
+    if (!loadSkillTool.execute) throw new Error('load_skill execute missing')
+
+    const executeResult = await loadSkillTool.execute({ name: 'test-skill' }, {} as never)
+    expect(onAgentModeActivated).toHaveBeenCalledTimes(1)
+    expect(executeResult).toHaveProperty('instructions', '# Skill instructions')
+    expect(executeResult).toHaveProperty('skillRoot', '/mock/builtin-skills/test-skill')
+    expect(executeResult).toHaveProperty('files', ['references/checklist.md', 'scripts/validate.mjs'])
+  })
+
+  test('returns error for non-enabled skill', async () => {
+    const model = createMockModel()
+    const options: BuildToolsOptions = {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+    }
+
+    const result = await buildToolsForSession(model, options)
+    const loadSkillTool = result.tools.load_skill
+    if (!loadSkillTool.execute) throw new Error('load_skill execute missing')
+
+    const executeResult = await loadSkillTool.execute({ name: 'disabled-skill' }, {} as never)
+    expect(executeResult).toHaveProperty('error')
+    expect((executeResult as { error: string }).error).toContain('not enabled')
+  })
+
+  test('maps loaded instructions to readable model text', async () => {
+    const model = createMockModel()
+    const result = await buildToolsForSession(model, {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+    })
+
+    await expect(
+      toModelOutput(result.tools.load_skill, {
+        instructions: '# Skill instructions',
+        skillRoot: '/mock/builtin-skills/test-skill',
+        files: ['references/checklist.md'],
+      })
+    ).resolves.toEqual({
+      type: 'text',
+      value:
+        '# Skill instructions\n\n' +
+        'Skill root: /mock/builtin-skills/test-skill\n' +
+        'Replace <SKILL_ROOT> with this absolute path when using referenced files.\n\n' +
+        'Available skill files:\n- references/checklist.md',
+    })
+  })
+
+  test('maps empty loaded instructions to an empty-skill result', async () => {
+    const model = createMockModel()
+    const result = await buildToolsForSession(model, {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+    })
+
+    await expect(toModelOutput(result.tools.load_skill, { instructions: '' })).resolves.toEqual({
+      type: 'text',
+      value: 'Skill instructions are empty.',
+    })
+  })
+})
+
+describe('session attachment RAG tools', () => {
+  function retrievalMessage(): Message {
+    return {
+      id: 'm1',
+      role: 'user',
+      timestamp: Date.now(),
+      contentParts: [{ type: 'text', text: 'What does the uploaded manual say?' }],
+      files: [
+        {
+          id: 'f1',
+          name: 'manual.md',
+          fileType: 'text/markdown',
+          ragMode: 'session-retrieval',
+          sessionAttachmentId: 42,
+          sessionAttachmentAvailability: 'allowed',
+          sessionAttachmentIndexStatus: 'ready',
+        },
+      ],
+    }
+  }
+
+  test('adds retrieval tools and instructions for session retrieval attachments', async () => {
+    const model = createMockModel()
+    const result = await buildToolsForSession(model, {
+      webBrowsing: false,
+      messages: [retrievalMessage()],
+      agentMode: 'off',
+    })
+
+    expect(getSessionAttachmentRagToolSetMock).toHaveBeenCalledWith([42])
+    expect(result.instructions).toContain('session attachment rag toolset')
+    expect(result.tools.query_session_attachment).toBeDefined()
+  })
+
+  test('does not add retrieval tools when the model cannot use tools', async () => {
+    const model = createMockModel({ isSupportToolUse: vi.fn().mockReturnValue(false) })
+    const result = await buildToolsForSession(model, {
+      webBrowsing: false,
+      messages: [retrievalMessage()],
+      agentMode: 'off',
+    })
+
+    expect(getSessionAttachmentRagToolSetMock).not.toHaveBeenCalled()
+    expect(result.instructions).not.toContain('session attachment rag toolset')
+    expect(result.tools.query_session_attachment).toBeUndefined()
+  })
+})
+
+describe('install_skill tool', () => {
+  test('install_skill is in tools when agentMode="on" AND codeExecution is provided', async () => {
+    const model = createMockModel()
+    const provider = createMockSandboxProvider()
+    const options: BuildToolsOptions = {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+      codeExecution: {
+        sessionId: 'session-1',
+        provider,
+        files: [],
+      },
+    }
+
+    const result = await buildToolsForSession(model, options)
+    expect(result.tools.install_skill).toBeDefined()
+  })
+
+  test('install_skill is NOT in tools when agentMode="off"', async () => {
+    const model = createMockModel()
+    const options: BuildToolsOptions = {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'off',
+    }
+
+    const result = await buildToolsForSession(model, options)
+    expect(result.tools.install_skill).toBeUndefined()
+  })
+
+  test('install_skill is NOT in tools when agentMode="on" but no codeExecution', async () => {
+    const model = createMockModel()
+    const options: BuildToolsOptions = {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+      // no codeExecution
+    }
+
+    const result = await buildToolsForSession(model, options)
+    expect(result.tools.install_skill).toBeUndefined()
+  })
+
+  test('maps installed skill result to readable model text', async () => {
+    const model = createMockModel()
+    const provider = createMockSandboxProvider()
+    const result = await buildToolsForSession(model, {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+      codeExecution: {
+        sessionId: 'session-1',
+        provider,
+        files: [],
+      },
+    })
+
+    await expect(
+      toModelOutput(result.tools.install_skill, {
+        success: true,
+        skillName: 'new-skill',
+        message: 'Skill "new-skill" installed and enabled.',
+      })
+    ).resolves.toEqual({
+      type: 'text',
+      value: 'Status: success\nMessage: Skill "new-skill" installed and enabled.',
+    })
+  })
+
+  test('maps empty install message to a completed-install result', async () => {
+    const model = createMockModel()
+    const provider = createMockSandboxProvider()
+    const result = await buildToolsForSession(model, {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+      codeExecution: {
+        sessionId: 'session-1',
+        provider,
+        files: [],
+      },
+    })
+
+    await expect(toModelOutput(result.tools.install_skill, { message: '' })).resolves.toEqual({
+      type: 'text',
+      value: 'Skill installation completed.',
+    })
+  })
+})
+
+describe('user_exec tool', () => {
+  test('user_exec is in tools when agentMode="on"', async () => {
+    const model = createMockModel()
+    const options: BuildToolsOptions = {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+    }
+    const result = await buildToolsForSession(model, options)
+    expect(result.tools.user_exec).toBeDefined()
+  })
+
+  test('user_exec is NOT in tools when agentMode="off"', async () => {
+    const model = createMockModel()
+    const options: BuildToolsOptions = {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'off',
+    }
+    const result = await buildToolsForSession(model, options)
+    expect(result.tools.user_exec).toBeUndefined()
+  })
+
+  test('user_exec is available in on mode without requiring a loaded skill', async () => {
+    getSettingsMock.mockReturnValue({ skills: { enabledSkillNames: [] } })
+    const result = await buildToolsForSession(createMockModel(), {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+    })
+
+    expect(result.tools.user_exec).toBeDefined()
+    expect(result.instructions).toContain('It is not limited to skill-driven tasks')
+    expect(result.instructions).toContain('subject to the host approval policy')
+  })
+
+  test('uses the first granted directory as cwd and describes the platform shell', async () => {
+    const model = createMockModel()
+    const result = await buildToolsForSession(model, {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+      sessionSettings: {
+        agentFullAccess: true,
+        workingDirectories: ['C:\\Users\\themez\\workspace\\chatbox-pro', 'D:\\other'],
+      },
+    })
+    if (!result.tools.user_exec.execute) throw new Error('user_exec execute missing')
+
+    expect(result.instructions).toContain('On Windows, user_exec runs PowerShell commands')
+    expect(result.instructions).toContain('instead of Bash-only operators such as &&')
+    expect(result.instructions).toContain('user_exec already starts in the first user-granted working directory')
+    await result.tools.user_exec.execute({ command: 'git status' }, {
+      toolCallId: 'tool-call-windows-cwd',
+      messages: [],
+    } as never)
+
+    expect(userExecMock).toHaveBeenCalledWith('git status', {
+      cwd: 'C:\\Users\\themez\\workspace\\chatbox-pro',
+      sessionId: undefined,
+      toolCallId: 'tool-call-windows-cwd',
+      approvalSource: 'full_access',
+    })
+  })
+
+  test('maps command results to readable model text', async () => {
+    const model = createMockModel()
+    const result = await buildToolsForSession(model, {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+    })
+
+    await expect(
+      toModelOutput(result.tools.user_exec, { success: true, exitCode: 0, stdout: 'ok\n', stderr: '' })
+    ).resolves.toEqual({
+      type: 'text',
+      value: 'Exit code: 0\n\nStdout:\nok\n',
+    })
+  })
+
+  test('maps command success with no output to an explicit no-output result', async () => {
+    const model = createMockModel()
+    const result = await buildToolsForSession(model, {
+      webBrowsing: false,
+      messages: [],
+      agentMode: 'on',
+    })
+
+    await expect(
+      toModelOutput(result.tools.user_exec, { success: true, exitCode: 0, stdout: '', stderr: '' })
+    ).resolves.toEqual({
+      type: 'text',
+      value: 'Exit code: 0\n\n(no output)',
+    })
+  })
+})

@@ -1,0 +1,510 @@
+--- a/esm/index.mjs
++++ b/esm/index.mjs
+@@ -2461,7 +2461,7 @@
+                 return this.push(chunk, final);
+         }
+         else {
+-            var f = 0, i = 0, is = void 0, buf = void 0;
++            var f = 0, i = 0, de = 0, buf = void 0;
+             if (!this.p.length)
+                 buf = chunk;
+             else if (!chunk.length)
+@@ -2470,11 +2470,36 @@
+                 buf = new u8(this.p.length + chunk.length);
+                 buf.set(this.p), buf.set(chunk, this.p.length);
+             }
+-            var l = buf.length, oc = this.c, add = oc && this.d;
++            var l = buf.length, oc = this.c, add = oc && this.d, z = oc == -2 && 8;
+             var _loop_2 = function () {
+                 var sig = b4(buf, i);
+-                if (sig == 0x4034B50) {
+-                    f = 1, is = i;
++                // When inside a data-descriptor entry (oc < 0) the compressed size is unknown,
++                // so the entry's end must be found by scanning. A real boundary is preceded by
++                // a data descriptor whose stored compressed size equals the number of compressed
++                // bytes seen so far. Signature-like bytes that occur naturally inside the
++                // compressed stream do not satisfy this check, so they are skipped instead of
++                // being mistaken for the next entry (see #243). `ok` records validation and `de`
++                // the resulting end of the file's data within `buf`.
++                var ok = !(oc < 0);
++                if (oc < 0) {
++                    if (sig == 0x8074B50) {
++                        // data descriptor signature: csize follows the 4-byte sig + 4-byte CRC
++                        if (this_1.b + i == (z ? b8(buf, i + 8) : b4(buf, i + 8)))
++                            ok = true, de = i;
++                    }
++                    else if (sig == 0x4034B50 || sig == 0x2014B50) {
++                        // next local header / central directory: a descriptor (optionally prefixed
++                        // by its signature) sits immediately before this position. csize is the
++                        // field before the trailing usize, regardless of the optional signature.
++                        var cs = z ? b8(buf, i - 16) : b4(buf, i - 8), d0 = i - 12 - z;
++                        if (d0 >= 0 && this_1.b + d0 == cs)
++                            ok = true, de = d0;
++                        else if (d0 - 4 >= 0 && this_1.b + d0 - 4 == cs)
++                            ok = true, de = d0 - 4;
++                    }
++                }
++                if (sig == 0x4034B50 && ok) {
++                    f = 1;
+                     this_1.d = null;
+                     this_1.c = 0;
+                     var bf = b2(buf, i + 6), cmp_1 = b2(buf, i + 8), u = bf & 2048, dd = bf & 8, fnl = b2(buf, i + 26), es = b2(buf, i + 28);
+@@ -2489,6 +2514,8 @@
+                             sc_1 = -1 - z64;
+                         i += es;
+                         this_1.c = sc_1;
++                        if (sc_1 < 0)
++                            this_1.b = 0;
+                         var d_1;
+                         var file_1 = {
+                             name: fn_1,
+@@ -2526,12 +2553,12 @@
+                     return "break";
+                 }
+                 else if (oc) {
+-                    if (sig == 0x8074B50) {
+-                        is = i += 12 + (oc == -2 && 8), f = 3, this_1.c = 0;
++                    if (sig == 0x8074B50 && ok) {
++                        i += 12 + z, f = 3, this_1.c = 0;
+                         return "break";
+                     }
+-                    else if (sig == 0x2014B50) {
+-                        is = i -= 4, f = 3, this_1.c = 0;
++                    else if (sig == 0x2014B50 && ok) {
++                        f = 3, this_1.c = 0;
+                         return "break";
+                     }
+                 }
+@@ -2544,15 +2571,22 @@
+             }
+             this.p = et;
+             if (oc < 0) {
+-                var dat = f ? buf.subarray(0, is - 12 - (oc == -2 && 8) - (b4(buf, is - 16) == 0x8074B50 && 4)) : buf.subarray(0, i);
++                // retain a margin so a data descriptor split across chunk boundaries is never
++                // flushed as file data; the validated end `de` is used once a boundary is found
++                var end = f ? de : (l > 24 ? l - 24 : 0);
++                var dat = buf.subarray(0, end);
++                this.b += end;
+                 if (add)
+                     add.push(dat, !!f);
+                 else
+                     this.k[+(f == 2)].push(dat);
++                if (!f)
++                    this.p = buf.subarray(end);
+             }
+             if (f & 2)
+                 return this.push(buf.subarray(i), final);
+-            this.p = buf.subarray(i);
++            if (!(oc < 0) || f)
++                this.p = buf.subarray(i);
+         }
+         if (final) {
+             if (this.c)
+--- a/esm/browser.js
++++ b/esm/browser.js
+@@ -2443,7 +2443,7 @@
+                 return this.push(chunk, final);
+         }
+         else {
+-            var f = 0, i = 0, is = void 0, buf = void 0;
++            var f = 0, i = 0, de = 0, buf = void 0;
+             if (!this.p.length)
+                 buf = chunk;
+             else if (!chunk.length)
+@@ -2452,11 +2452,36 @@
+                 buf = new u8(this.p.length + chunk.length);
+                 buf.set(this.p), buf.set(chunk, this.p.length);
+             }
+-            var l = buf.length, oc = this.c, add = oc && this.d;
++            var l = buf.length, oc = this.c, add = oc && this.d, z = oc == -2 && 8;
+             var _loop_2 = function () {
+                 var sig = b4(buf, i);
+-                if (sig == 0x4034B50) {
+-                    f = 1, is = i;
++                // When inside a data-descriptor entry (oc < 0) the compressed size is unknown,
++                // so the entry's end must be found by scanning. A real boundary is preceded by
++                // a data descriptor whose stored compressed size equals the number of compressed
++                // bytes seen so far. Signature-like bytes that occur naturally inside the
++                // compressed stream do not satisfy this check, so they are skipped instead of
++                // being mistaken for the next entry (see #243). `ok` records validation and `de`
++                // the resulting end of the file's data within `buf`.
++                var ok = !(oc < 0);
++                if (oc < 0) {
++                    if (sig == 0x8074B50) {
++                        // data descriptor signature: csize follows the 4-byte sig + 4-byte CRC
++                        if (this_1.b + i == (z ? b8(buf, i + 8) : b4(buf, i + 8)))
++                            ok = true, de = i;
++                    }
++                    else if (sig == 0x4034B50 || sig == 0x2014B50) {
++                        // next local header / central directory: a descriptor (optionally prefixed
++                        // by its signature) sits immediately before this position. csize is the
++                        // field before the trailing usize, regardless of the optional signature.
++                        var cs = z ? b8(buf, i - 16) : b4(buf, i - 8), d0 = i - 12 - z;
++                        if (d0 >= 0 && this_1.b + d0 == cs)
++                            ok = true, de = d0;
++                        else if (d0 - 4 >= 0 && this_1.b + d0 - 4 == cs)
++                            ok = true, de = d0 - 4;
++                    }
++                }
++                if (sig == 0x4034B50 && ok) {
++                    f = 1;
+                     this_1.d = null;
+                     this_1.c = 0;
+                     var bf = b2(buf, i + 6), cmp_1 = b2(buf, i + 8), u = bf & 2048, dd = bf & 8, fnl = b2(buf, i + 26), es = b2(buf, i + 28);
+@@ -2471,6 +2496,8 @@
+                             sc_1 = -1 - z64;
+                         i += es;
+                         this_1.c = sc_1;
++                        if (sc_1 < 0)
++                            this_1.b = 0;
+                         var d_1;
+                         var file_1 = {
+                             name: fn_1,
+@@ -2508,12 +2535,12 @@
+                     return "break";
+                 }
+                 else if (oc) {
+-                    if (sig == 0x8074B50) {
+-                        is = i += 12 + (oc == -2 && 8), f = 3, this_1.c = 0;
++                    if (sig == 0x8074B50 && ok) {
++                        i += 12 + z, f = 3, this_1.c = 0;
+                         return "break";
+                     }
+-                    else if (sig == 0x2014B50) {
+-                        is = i -= 4, f = 3, this_1.c = 0;
++                    else if (sig == 0x2014B50 && ok) {
++                        f = 3, this_1.c = 0;
+                         return "break";
+                     }
+                 }
+@@ -2526,15 +2553,22 @@
+             }
+             this.p = et;
+             if (oc < 0) {
+-                var dat = f ? buf.subarray(0, is - 12 - (oc == -2 && 8) - (b4(buf, is - 16) == 0x8074B50 && 4)) : buf.subarray(0, i);
++                // retain a margin so a data descriptor split across chunk boundaries is never
++                // flushed as file data; the validated end `de` is used once a boundary is found
++                var end = f ? de : (l > 24 ? l - 24 : 0);
++                var dat = buf.subarray(0, end);
++                this.b += end;
+                 if (add)
+                     add.push(dat, !!f);
+                 else
+                     this.k[+(f == 2)].push(dat);
++                if (!f)
++                    this.p = buf.subarray(end);
+             }
+             if (f & 2)
+                 return this.push(buf.subarray(i), final);
+-            this.p = buf.subarray(i);
++            if (!(oc < 0) || f)
++                this.p = buf.subarray(i);
+         }
+         if (final) {
+             if (this.c)
+--- a/lib/index.cjs
++++ b/lib/index.cjs
+@@ -2448,7 +2448,7 @@
+                 return this.push(chunk, final);
+         }
+         else {
+-            var f = 0, i = 0, is = void 0, buf = void 0;
++            var f = 0, i = 0, de = 0, buf = void 0;
+             if (!this.p.length)
+                 buf = chunk;
+             else if (!chunk.length)
+@@ -2457,11 +2457,36 @@
+                 buf = new u8(this.p.length + chunk.length);
+                 buf.set(this.p), buf.set(chunk, this.p.length);
+             }
+-            var l = buf.length, oc = this.c, add = oc && this.d;
++            var l = buf.length, oc = this.c, add = oc && this.d, z = oc == -2 && 8;
+             var _loop_2 = function () {
+                 var sig = b4(buf, i);
+-                if (sig == 0x4034B50) {
+-                    f = 1, is = i;
++                // When inside a data-descriptor entry (oc < 0) the compressed size is unknown,
++                // so the entry's end must be found by scanning. A real boundary is preceded by
++                // a data descriptor whose stored compressed size equals the number of compressed
++                // bytes seen so far. Signature-like bytes that occur naturally inside the
++                // compressed stream do not satisfy this check, so they are skipped instead of
++                // being mistaken for the next entry (see #243). `ok` records validation and `de`
++                // the resulting end of the file's data within `buf`.
++                var ok = !(oc < 0);
++                if (oc < 0) {
++                    if (sig == 0x8074B50) {
++                        // data descriptor signature: csize follows the 4-byte sig + 4-byte CRC
++                        if (this_1.b + i == (z ? b8(buf, i + 8) : b4(buf, i + 8)))
++                            ok = true, de = i;
++                    }
++                    else if (sig == 0x4034B50 || sig == 0x2014B50) {
++                        // next local header / central directory: a descriptor (optionally prefixed
++                        // by its signature) sits immediately before this position. csize is the
++                        // field before the trailing usize, regardless of the optional signature.
++                        var cs = z ? b8(buf, i - 16) : b4(buf, i - 8), d0 = i - 12 - z;
++                        if (d0 >= 0 && this_1.b + d0 == cs)
++                            ok = true, de = d0;
++                        else if (d0 - 4 >= 0 && this_1.b + d0 - 4 == cs)
++                            ok = true, de = d0 - 4;
++                    }
++                }
++                if (sig == 0x4034B50 && ok) {
++                    f = 1;
+                     this_1.d = null;
+                     this_1.c = 0;
+                     var bf = b2(buf, i + 6), cmp_1 = b2(buf, i + 8), u = bf & 2048, dd = bf & 8, fnl = b2(buf, i + 26), es = b2(buf, i + 28);
+@@ -2476,6 +2501,8 @@
+                             sc_1 = -1 - z64;
+                         i += es;
+                         this_1.c = sc_1;
++                        if (sc_1 < 0)
++                            this_1.b = 0;
+                         var d_1;
+                         var file_1 = {
+                             name: fn_1,
+@@ -2513,12 +2540,12 @@
+                     return "break";
+                 }
+                 else if (oc) {
+-                    if (sig == 0x8074B50) {
+-                        is = i += 12 + (oc == -2 && 8), f = 3, this_1.c = 0;
++                    if (sig == 0x8074B50 && ok) {
++                        i += 12 + z, f = 3, this_1.c = 0;
+                         return "break";
+                     }
+-                    else if (sig == 0x2014B50) {
+-                        is = i -= 4, f = 3, this_1.c = 0;
++                    else if (sig == 0x2014B50 && ok) {
++                        f = 3, this_1.c = 0;
+                         return "break";
+                     }
+                 }
+@@ -2531,15 +2558,22 @@
+             }
+             this.p = et;
+             if (oc < 0) {
+-                var dat = f ? buf.subarray(0, is - 12 - (oc == -2 && 8) - (b4(buf, is - 16) == 0x8074B50 && 4)) : buf.subarray(0, i);
++                // retain a margin so a data descriptor split across chunk boundaries is never
++                // flushed as file data; the validated end `de` is used once a boundary is found
++                var end = f ? de : (l > 24 ? l - 24 : 0);
++                var dat = buf.subarray(0, end);
++                this.b += end;
+                 if (add)
+                     add.push(dat, !!f);
+                 else
+                     this.k[+(f == 2)].push(dat);
++                if (!f)
++                    this.p = buf.subarray(end);
+             }
+             if (f & 2)
+                 return this.push(buf.subarray(i), final);
+-            this.p = buf.subarray(i);
++            if (!(oc < 0) || f)
++                this.p = buf.subarray(i);
+         }
+         if (final) {
+             if (this.c)
+--- a/lib/browser.cjs
++++ b/lib/browser.cjs
+@@ -2468,7 +2468,7 @@
+                 return this.push(chunk, final);
+         }
+         else {
+-            var f = 0, i = 0, is = void 0, buf = void 0;
++            var f = 0, i = 0, de = 0, buf = void 0;
+             if (!this.p.length)
+                 buf = chunk;
+             else if (!chunk.length)
+@@ -2477,11 +2477,36 @@
+                 buf = new u8(this.p.length + chunk.length);
+                 buf.set(this.p), buf.set(chunk, this.p.length);
+             }
+-            var l = buf.length, oc = this.c, add = oc && this.d;
++            var l = buf.length, oc = this.c, add = oc && this.d, z = oc == -2 && 8;
+             var _loop_2 = function () {
+                 var sig = b4(buf, i);
+-                if (sig == 0x4034B50) {
+-                    f = 1, is = i;
++                // When inside a data-descriptor entry (oc < 0) the compressed size is unknown,
++                // so the entry's end must be found by scanning. A real boundary is preceded by
++                // a data descriptor whose stored compressed size equals the number of compressed
++                // bytes seen so far. Signature-like bytes that occur naturally inside the
++                // compressed stream do not satisfy this check, so they are skipped instead of
++                // being mistaken for the next entry (see #243). `ok` records validation and `de`
++                // the resulting end of the file's data within `buf`.
++                var ok = !(oc < 0);
++                if (oc < 0) {
++                    if (sig == 0x8074B50) {
++                        // data descriptor signature: csize follows the 4-byte sig + 4-byte CRC
++                        if (this_1.b + i == (z ? b8(buf, i + 8) : b4(buf, i + 8)))
++                            ok = true, de = i;
++                    }
++                    else if (sig == 0x4034B50 || sig == 0x2014B50) {
++                        // next local header / central directory: a descriptor (optionally prefixed
++                        // by its signature) sits immediately before this position. csize is the
++                        // field before the trailing usize, regardless of the optional signature.
++                        var cs = z ? b8(buf, i - 16) : b4(buf, i - 8), d0 = i - 12 - z;
++                        if (d0 >= 0 && this_1.b + d0 == cs)
++                            ok = true, de = d0;
++                        else if (d0 - 4 >= 0 && this_1.b + d0 - 4 == cs)
++                            ok = true, de = d0 - 4;
++                    }
++                }
++                if (sig == 0x4034B50 && ok) {
++                    f = 1;
+                     this_1.d = null;
+                     this_1.c = 0;
+                     var bf = b2(buf, i + 6), cmp_1 = b2(buf, i + 8), u = bf & 2048, dd = bf & 8, fnl = b2(buf, i + 26), es = b2(buf, i + 28);
+@@ -2496,6 +2521,8 @@
+                             sc_1 = -1 - z64;
+                         i += es;
+                         this_1.c = sc_1;
++                        if (sc_1 < 0)
++                            this_1.b = 0;
+                         var d_1;
+                         var file_1 = {
+                             name: fn_1,
+@@ -2533,12 +2560,12 @@
+                     return "break";
+                 }
+                 else if (oc) {
+-                    if (sig == 0x8074B50) {
+-                        is = i += 12 + (oc == -2 && 8), f = 3, this_1.c = 0;
++                    if (sig == 0x8074B50 && ok) {
++                        i += 12 + z, f = 3, this_1.c = 0;
+                         return "break";
+                     }
+-                    else if (sig == 0x2014B50) {
+-                        is = i -= 4, f = 3, this_1.c = 0;
++                    else if (sig == 0x2014B50 && ok) {
++                        f = 3, this_1.c = 0;
+                         return "break";
+                     }
+                 }
+@@ -2551,15 +2578,22 @@
+             }
+             this.p = et;
+             if (oc < 0) {
+-                var dat = f ? buf.subarray(0, is - 12 - (oc == -2 && 8) - (b4(buf, is - 16) == 0x8074B50 && 4)) : buf.subarray(0, i);
++                // retain a margin so a data descriptor split across chunk boundaries is never
++                // flushed as file data; the validated end `de` is used once a boundary is found
++                var end = f ? de : (l > 24 ? l - 24 : 0);
++                var dat = buf.subarray(0, end);
++                this.b += end;
+                 if (add)
+                     add.push(dat, !!f);
+                 else
+                     this.k[+(f == 2)].push(dat);
++                if (!f)
++                    this.p = buf.subarray(end);
+             }
+             if (f & 2)
+                 return this.push(buf.subarray(i), final);
+-            this.p = buf.subarray(i);
++            if (!(oc < 0) || f)
++                this.p = buf.subarray(i);
+         }
+         if (final) {
+             if (this.c)
+--- a/lib/node.cjs
++++ b/lib/node.cjs
+@@ -2484,7 +2484,7 @@
+                 return this.push(chunk, final);
+         }
+         else {
+-            var f = 0, i = 0, is = void 0, buf = void 0;
++            var f = 0, i = 0, de = 0, buf = void 0;
+             if (!this.p.length)
+                 buf = chunk;
+             else if (!chunk.length)
+@@ -2493,11 +2493,36 @@
+                 buf = new u8(this.p.length + chunk.length);
+                 buf.set(this.p), buf.set(chunk, this.p.length);
+             }
+-            var l = buf.length, oc = this.c, add = oc && this.d;
++            var l = buf.length, oc = this.c, add = oc && this.d, z = oc == -2 && 8;
+             var _loop_2 = function () {
+                 var sig = b4(buf, i);
+-                if (sig == 0x4034B50) {
+-                    f = 1, is = i;
++                // When inside a data-descriptor entry (oc < 0) the compressed size is unknown,
++                // so the entry's end must be found by scanning. A real boundary is preceded by
++                // a data descriptor whose stored compressed size equals the number of compressed
++                // bytes seen so far. Signature-like bytes that occur naturally inside the
++                // compressed stream do not satisfy this check, so they are skipped instead of
++                // being mistaken for the next entry (see #243). `ok` records validation and `de`
++                // the resulting end of the file's data within `buf`.
++                var ok = !(oc < 0);
++                if (oc < 0) {
++                    if (sig == 0x8074B50) {
++                        // data descriptor signature: csize follows the 4-byte sig + 4-byte CRC
++                        if (this_1.b + i == (z ? b8(buf, i + 8) : b4(buf, i + 8)))
++                            ok = true, de = i;
++                    }
++                    else if (sig == 0x4034B50 || sig == 0x2014B50) {
++                        // next local header / central directory: a descriptor (optionally prefixed
++                        // by its signature) sits immediately before this position. csize is the
++                        // field before the trailing usize, regardless of the optional signature.
++                        var cs = z ? b8(buf, i - 16) : b4(buf, i - 8), d0 = i - 12 - z;
++                        if (d0 >= 0 && this_1.b + d0 == cs)
++                            ok = true, de = d0;
++                        else if (d0 - 4 >= 0 && this_1.b + d0 - 4 == cs)
++                            ok = true, de = d0 - 4;
++                    }
++                }
++                if (sig == 0x4034B50 && ok) {
++                    f = 1;
+                     this_1.d = null;
+                     this_1.c = 0;
+                     var bf = b2(buf, i + 6), cmp_1 = b2(buf, i + 8), u = bf & 2048, dd = bf & 8, fnl = b2(buf, i + 26), es = b2(buf, i + 28);
+@@ -2512,6 +2537,8 @@
+                             sc_1 = -1 - z64;
+                         i += es;
+                         this_1.c = sc_1;
++                        if (sc_1 < 0)
++                            this_1.b = 0;
+                         var d_1;
+                         var file_1 = {
+                             name: fn_1,
+@@ -2549,12 +2576,12 @@
+                     return "break";
+                 }
+                 else if (oc) {
+-                    if (sig == 0x8074B50) {
+-                        is = i += 12 + (oc == -2 && 8), f = 3, this_1.c = 0;
++                    if (sig == 0x8074B50 && ok) {
++                        i += 12 + z, f = 3, this_1.c = 0;
+                         return "break";
+                     }
+-                    else if (sig == 0x2014B50) {
+-                        is = i -= 4, f = 3, this_1.c = 0;
++                    else if (sig == 0x2014B50 && ok) {
++                        f = 3, this_1.c = 0;
+                         return "break";
+                     }
+                 }
+@@ -2567,15 +2594,22 @@
+             }
+             this.p = et;
+             if (oc < 0) {
+-                var dat = f ? buf.subarray(0, is - 12 - (oc == -2 && 8) - (b4(buf, is - 16) == 0x8074B50 && 4)) : buf.subarray(0, i);
++                // retain a margin so a data descriptor split across chunk boundaries is never
++                // flushed as file data; the validated end `de` is used once a boundary is found
++                var end = f ? de : (l > 24 ? l - 24 : 0);
++                var dat = buf.subarray(0, end);
++                this.b += end;
+                 if (add)
+                     add.push(dat, !!f);
+                 else
+                     this.k[+(f == 2)].push(dat);
++                if (!f)
++                    this.p = buf.subarray(end);
+             }
+             if (f & 2)
+                 return this.push(buf.subarray(i), final);
+-            this.p = buf.subarray(i);
++            if (!(oc < 0) || f)
++                this.p = buf.subarray(i);
+         }
+         if (final) {
+             if (this.c)

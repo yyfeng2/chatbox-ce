@@ -1,0 +1,380 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* radius */
+  --chatbox-radius-none: 0rem;
+  --chatbox-radius-xs: 0.125rem;
+  --chatbox-radius-sm: 0.25rem;
+  --chatbox-radius-md: 0.5rem;
+  --chatbox-radius-lg: 1rem;
+  --chatbox-radius-xl: 1.5rem;
+  --chatbox-radius-xxl: 2rem;
+
+  /* spacing */
+  --chatbox-spacing-none: 0rem;
+  --chatbox-spacing-3xs: 0.125rem;
+  --chatbox-spacing-xxs: 0.25rem;
+  --chatbox-spacing-xs: 0.5rem;
+  --chatbox-spacing-sm: 0.75rem;
+  --chatbox-spacing-md: 1rem;
+  --chatbox-spacing-lg: 1.25rem;
+  --chatbox-spacing-xl: 1.5rem;
+  --chatbox-spacing-xxl: 2rem;
+}
+
+:root {
+  /* colors */
+  --chatbox-tint-primary: #212529;
+  --chatbox-tint-secondary: #495057;
+  --chatbox-tint-tertiary: #868e96;
+
+  --chatbox-tint-white: #ffffff;
+  --chatbox-tint-black: #000000;
+  --chatbox-tint-gray: #868e96;
+
+  --chatbox-tint-disabled: #adb5bd;
+  --chatbox-brand: #228be6;
+  --chatbox-tint-brand: var(--chatbox-brand);
+  --chatbox-tint-placeholder: #adb5bd;
+  --chatbox-tint-error: #fa5252;
+  --chatbox-tint-error-disabled: #ff8787;
+  --chatbox-tint-warning: #fab005;
+  --chatbox-tint-success: #12b886;
+
+  --chatbox-border-primary: #dee2e6;
+  --chatbox-border-secondary: #ced4da;
+  --chatbox-border-warning: #fab005;
+  --chatbox-border-error: #fa5252;
+  --chatbox-border-success: #12b886;
+  --chatbox-border-brand: var(--chatbox-brand);
+
+  --chatbox-background-primary: #ffffff;
+  --chatbox-background-primary-hover: #f8f9fa;
+  --chatbox-background-secondary: #f3f3f3;
+  --chatbox-background-secondary-hover: #e9ecef;
+  --chatbox-background-tertiary: #dee2e6;
+  --chatbox-background-tertiary-hover: #ced4da;
+  --chatbox-background-disabled: #e9ecef;
+
+  --chatbox-background-brand-primary: var(--chatbox-brand);
+  --chatbox-background-brand-primary-hover: color-mix(in srgb, var(--chatbox-brand), black 12%);
+  --chatbox-background-brand-secondary: color-mix(in srgb, var(--chatbox-brand), transparent 92%);
+  --chatbox-background-brand-secondary-hover: color-mix(in srgb, var(--chatbox-brand), transparent 84%);
+
+  --chatbox-background-gray-primary: #868e96;
+  --chatbox-background-gray-primary-hover: #495057;
+  --chatbox-background-gray-secondary: rgb(134, 142, 150, 0.1);
+  --chatbox-background-gray-secondary-hover: rgb(134, 142, 150, 0.12);
+
+  --chatbox-background-success-primary: #12b886;
+  --chatbox-background-success-primary-hover: #0ca678;
+  --chatbox-background-success-secondary: rgb(18, 184, 134, 0.1);
+  --chatbox-background-success-secondary-hover: rgb(18, 184, 134, 0.12);
+
+  --chatbox-background-error-primary: #fa5252;
+  --chatbox-background-error-primary-hover: #f03e3e;
+  --chatbox-background-error-secondary: rgb(250, 82, 82, 0.1);
+  --chatbox-background-error-secondary-hover: rgb(250, 82, 82, 0.12);
+
+  --chatbox-background-warning-primary: #fab005;
+  --chatbox-background-warning-primary-hover: #f59f00;
+  --chatbox-background-warning-secondary: rgb(250, 176, 5, 0.1);
+  --chatbox-background-warning-secondary-hover: rgb(250, 176, 5, 0.12);
+
+  --chatbox-background-mask-overlay: rgb(59, 59, 59, 0.64);
+  --chatbox-background-mask-lighten: rgb(255, 255, 255, 0.76);
+
+  /* shadcn semantic colors */
+  --background: var(--chatbox-background-primary);
+  --foreground: var(--chatbox-tint-primary);
+  --card: var(--chatbox-background-primary);
+  --card-foreground: var(--chatbox-tint-primary);
+  --popover: var(--chatbox-background-primary);
+  --popover-foreground: var(--chatbox-tint-primary);
+  --primary: var(--chatbox-tint-primary);
+  --primary-foreground: var(--chatbox-background-primary);
+  --secondary: var(--chatbox-background-secondary);
+  --secondary-foreground: var(--chatbox-tint-primary);
+  --muted: var(--chatbox-background-secondary);
+  --muted-foreground: var(--chatbox-tint-tertiary);
+  --accent: var(--chatbox-background-secondary);
+  --accent-foreground: var(--chatbox-tint-primary);
+  --destructive: var(--chatbox-tint-error);
+  --destructive-foreground: var(--chatbox-tint-white);
+  --border: var(--chatbox-border-primary);
+  --input: var(--chatbox-border-primary);
+  --ring: var(--chatbox-tint-brand);
+}
+
+:root[data-mantine-color-scheme="dark"] {
+  /* colors */
+  --chatbox-tint-primary: #ffffff;
+  --chatbox-tint-secondary: #ced4da;
+  --chatbox-tint-tertiary: #828282;
+
+  --chatbox-tint-white: #ffffff;
+  --chatbox-tint-black: #000000;
+  --chatbox-tint-gray: #868e96;
+
+  --chatbox-tint-disabled: #696969;
+  --chatbox-brand: #228be6;
+  --chatbox-tint-brand: var(--chatbox-brand);
+  --chatbox-tint-placeholder: #828282;
+  --chatbox-tint-error: #f03e3e;
+  --chatbox-tint-error-disabled: rgb(224, 49, 49, 0.5);
+  --chatbox-tint-warning: #ffe066;
+  --chatbox-tint-success: #63e6be;
+
+  --chatbox-border-primary: #495057;
+  --chatbox-border-secondary: #868e96;
+  --chatbox-border-warning: #ffe066;
+  --chatbox-border-error: #f03e3e;
+  --chatbox-border-success: #63e6be;
+  --chatbox-border-brand: var(--chatbox-brand);
+
+  --chatbox-background-primary: #242424;
+  --chatbox-background-primary-hover: #1f1f1f;
+  --chatbox-background-secondary: #3b3b3b;
+  --chatbox-background-secondary-hover: #495057;
+  --chatbox-background-tertiary: #424242;
+  --chatbox-background-tertiary-hover: #696969;
+  --chatbox-background-disabled: #2e2e2e;
+
+  --chatbox-background-brand-primary: var(--chatbox-brand);
+  --chatbox-background-brand-primary-hover: color-mix(in srgb, var(--chatbox-brand), black 12%);
+  --chatbox-background-brand-secondary: color-mix(in srgb, var(--chatbox-brand), transparent 80%);
+  --chatbox-background-brand-secondary-hover: color-mix(in srgb, var(--chatbox-brand), transparent 76%);
+
+  --chatbox-background-gray-primary: #343a40;
+  --chatbox-background-gray-primary-hover: #212529;
+  --chatbox-background-gray-secondary: rgb(134, 142, 150, 0.15);
+  --chatbox-background-gray-secondary-hover: rgb(134, 142, 150, 0.2);
+
+  --chatbox-background-success-primary: #099268;
+  --chatbox-background-success-primary-hover: #087f5b;
+  --chatbox-background-success-secondary: rgb(18, 184, 134, 0.15);
+  --chatbox-background-success-secondary-hover: rgb(18, 184, 134, 0.2);
+
+  --chatbox-background-error-primary: #e03131;
+  --chatbox-background-error-primary-hover: #c92a2a;
+  --chatbox-background-error-secondary: rgb(250, 82, 82, 0.15);
+  --chatbox-background-error-secondary-hover: rgb(250, 82, 82, 0.2);
+
+  --chatbox-background-warning-primary: #f08c00;
+  --chatbox-background-warning-primary-hover: #e67700;
+  --chatbox-background-warning-secondary: rgb(250, 176, 5, 0.15);
+  --chatbox-background-warning-secondary-hover: rgb(250, 176, 5, 0.2);
+
+  --chatbox-background-mask-overlay: rgb(31, 31, 31, 0.78);
+  --chatbox-background-mask-lighten: rgb(173, 181, 189, 0.48);
+}
+
+:root[data-mantine-color-scheme="light"][data-mantine-color-scheme],
+:root[data-mantine-color-scheme="dark"][data-mantine-color-scheme] {
+  /* brand */
+  --mantine-color-chatbox-brand-text: var(--chatbox-tint-brand);
+  --mantine-color-chatbox-brand-filled: var(--chatbox-background-brand-primary);
+  --mantine-color-chatbox-brand-filled-hover: var(--chatbox-background-brand-primary-hover);
+  --mantine-color-chatbox-brand-light: var(--chatbox-background-brand-secondary);
+  --mantine-color-chatbox-brand-light-hover: var(--chatbox-background-brand-secondary-hover);
+  --mantine-color-chatbox-brand-light-color: var(--chatbox-tint-brand);
+  --mantine-color-chatbox-brand-outline: var(--chatbox-border-brand);
+  --mantine-color-chatbox-brand-outline-hover: color-mix(in srgb, var(--chatbox-border-brand), transparent 95%);
+
+  /* success */
+  --mantine-color-chatbox-success-text: var(--chatbox-tint-success);
+  --mantine-color-chatbox-success-filled: var(--chatbox-background-success-primary);
+  --mantine-color-chatbox-success-filled-hover: var(--chatbox-background-success-primary-hover);
+  --mantine-color-chatbox-success-light: var(--chatbox-background-success-secondary);
+  --mantine-color-chatbox-success-light-hover: var(--chatbox-background-success-secondary-hover);
+  --mantine-color-chatbox-success-light-color: var(--chatbox-tint-success);
+  --mantine-color-chatbox-success-outline: var(--chatbox-border-success);
+  --mantine-color-chatbox-success-outline-hover: color-mix(in srgb, var(--chatbox-border-success), transparent 95%);
+
+  /* error */
+  --mantine-color-chatbox-error-text: var(--chatbox-tint-error);
+  --mantine-color-chatbox-error-filled: var(--chatbox-background-error-primary);
+  --mantine-color-chatbox-error-filled-hover: var(--chatbox-background-error-primary-hover);
+  --mantine-color-chatbox-error-light: var(--chatbox-background-error-secondary);
+  --mantine-color-chatbox-error-light-hover: var(--chatbox-background-error-secondary-hover);
+  --mantine-color-chatbox-error-light-color: var(--chatbox-tint-error);
+  --mantine-color-chatbox-error-outline: var(--chatbox-border-error);
+  --mantine-color-chatbox-error-outline-hover: color-mix(in srgb, var(--chatbox-border-error), transparent 95%);
+
+  /* warning */
+  --mantine-color-chatbox-warning-text: var(--chatbox-tint-warning);
+  --mantine-color-chatbox-warning-filled: var(--chatbox-background-warning-primary);
+  --mantine-color-chatbox-warning-filled-hover: var(--chatbox-background-warning-primary-hover);
+  --mantine-color-chatbox-warning-light: var(--chatbox-background-warning-secondary);
+  --mantine-color-chatbox-warning-light-hover: var(--chatbox-background-warning-secondary-hover);
+  --mantine-color-chatbox-warning-light-color: var(--chatbox-tint-warning);
+  --mantine-color-chatbox-warning-outline: var(--chatbox-border-warning);
+  --mantine-color-chatbox-warning-outline-hover: color-mix(in srgb, var(--chatbox-border-warning), transparent 95%);
+
+  /* warning */
+  --mantine-color-chatbox-gray-text: var(--chatbox-tint-gray);
+  --mantine-color-chatbox-gray-filled: var(--chatbox-background-gray-primary);
+  --mantine-color-chatbox-gray-filled-hover: var(--chatbox-background-gray-primary-hover);
+  --mantine-color-chatbox-gray-light: var(--chatbox-background-gray-secondary);
+  --mantine-color-chatbox-gray-light-hover: var(--chatbox-background-gray-secondary-hover);
+  --mantine-color-chatbox-gray-light-color: var(--chatbox-tint-gray);
+  --mantine-color-chatbox-gray-outline: var(--chatbox-tint-gray);
+  --mantine-color-chatbox-gray-outline-hover: color-mix(in srgb, var(--chatbox-tint-gray), transparent 95%);
+
+  --mantine-color-chatbox-primary-text: var(--chatbox-tint-primary);
+  --mantine-color-chatbox-primary-filled: var(--chatbox-background-primary);
+  --mantine-color-chatbox-primary-filled-hover: var(--chatbox-background-primary-hover);
+  --mantine-color-chatbox-primary-light: var(--chatbox-background-secondary);
+  --mantine-color-chatbox-primary-light-hover: var(--chatbox-background-secondary-hover);
+  --mantine-color-chatbox-primary-light-color: var(--chatbox-tint-primary);
+  --mantine-color-chatbox-primary-outline: var(--chatbox-border-primary);
+  --mantine-color-chatbox-primary-outline-hover: color-mix(in srgb, var(--chatbox-border-primary), transparent 95%);
+}
+
+.mantine-Spotlight-actionsGroup {
+  margin-bottom: 2rem;
+}
+
+.mantine-Spotlight-actionDescription {
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+}
+
+/* KaTeX styles for preventing overflow */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.5rem;
+}
+
+.katex-display > .katex {
+  /* width: auto; */
+  /* max-width: 100%; */
+  display: inline-block;
+}
+
+/* Hide scrollbar for inline math */
+.katex:not(.katex-display) {
+  /* max-width: 100%; */
+  overflow: hidden;
+}
+
+/* Style scrollbar for displayed math equations */
+.katex-display::-webkit-scrollbar {
+  height: 6px;
+}
+
+.katex-display::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.katex-display::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.katex-display:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Dark mode scrollbar */
+[data-mantine-color-scheme="dark"] .katex-display::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+[data-mantine-color-scheme="dark"] .katex-display:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.copilot-picker-scroll-area .mantine-ScrollArea-scrollbar {
+  padding-left: var(--mantine-spacing-md);
+  padding-right: var(--mantine-spacing-md);
+}
+
+.pswp__top-bar {
+  margin-top: var(--mobile-safe-area-inset-top);
+  -webkit-app-region: no-drag;
+}
+html[data-need-room-for-mac-controls="true"] .pswp__counter {
+  padding-top: 1rem;
+}
+html[data-need-room-for-windows-controls="true"] .pswp__top-bar {
+  padding-right: 9rem;
+}
+.pswp {
+  pointer-events: auto;
+}
+
+.scrollbar-custom::-webkit-scrollbar {
+  width: 12px !important;
+}
+
+*::-webkit-scrollbar-corner {
+  background-color: transparent;
+}
+
+div[data-vaul-handle] {
+  margin: 12px auto;
+  width: 64px;
+  height: 4px;
+  background-color: var(--chatbox-tint-tertiary);
+  border-radius: 2px;
+  cursor: grab;
+  user-select: none;
+  opacity: 0.5;
+}
+div[data-vaul-overlay] {
+  z-index: 2000;
+}
+div[data-vaul-drawer] {
+  z-index: 2000;
+}
+
+/* Rotating border beam on the pending-approval card (ToolCallPartUI): a bright amber
+   segment travels around a faint ring. Without @property support the ring degrades
+   to a static gradient border. */
+@property --chatbox-approval-ring-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes chatbox-approval-ring-spin {
+  to {
+    --chatbox-approval-ring-angle: 360deg;
+  }
+}
+
+.chatbox-approval-ring {
+  position: relative;
+}
+
+/* The band is drawn just inside the card edge (inset: 0), because ancestor containers
+   (Collapse, virtualized list items) clip anything that sticks out of the card. */
+.chatbox-approval-ring::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--chatbox-approval-ring-angle),
+    color-mix(in srgb, var(--chatbox-tint-warning) 18%, transparent),
+    color-mix(in srgb, var(--chatbox-tint-warning) 95%, transparent) 12%,
+    color-mix(in srgb, var(--chatbox-tint-warning) 18%, transparent) 30%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: chatbox-approval-ring-spin 2.5s linear infinite;
+  pointer-events: none;
+}

@@ -1,0 +1,18 @@
+packages:
+  - .
+  - release/app
+
+# Supply chain security: only install packages published at least 7 days ago
+minimumReleaseAge: 10080
+minimumReleaseAgeExclude:
+  - "@ruguoapp/*"
+
+# epub falls back to its pure-JavaScript adm-zip implementation when this
+# deprecated native optional dependency is unavailable.
+ignoredOptionalDependencies:
+  - zipfile
+
+patchedDependencies:
+  fflate@0.8.3: patches/fflate@0.8.3.patch
+  libsql@0.5.22: patches/libsql@0.5.22.patch
+  mdast-util-gfm-autolink-literal@2.0.1: patches/mdast-util-gfm-autolink-literal@2.0.1.patch

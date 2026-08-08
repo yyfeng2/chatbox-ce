@@ -1,0 +1,121 @@
+import NiceModal, { useModal } from '@ebay/nice-modal-react'
+import { Alert, Stack, Text } from '@mantine/core'
+import {
+  LOCAL_PARSER_FILE_TOO_LARGE_ERROR,
+  LOCAL_PARSER_MAX_PDF_FILE_SIZE_LABEL,
+  LOCAL_PARSER_PDF_PASSWORD_PROTECTED_ERROR,
+} from '@shared/file-parse-errors'
+import { IconAlertCircle } from '@tabler/icons-react'
+import { useTranslation } from 'react-i18next'
+import { AdaptiveModal } from '@/components/common/AdaptiveModal'
+import { ScalableIcon } from '@/components/common/ScalableIcon'
+import {
+  isSessionAttachmentRagAuthError,
+  isSessionAttachmentRagIndexingError,
+  SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR,
+  SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR,
+  SESSION_ATTACHMENT_RAG_REQUIRES_TOOL_USE_MODEL_ERROR,
+} from '@/stores/sessionAttachmentRagErrors'
+
+interface FileParseErrorProps {
+  errorCode: string
+  fileName?: string
+}
+
+const FileParseError = NiceModal.create(({ errorCode, fileName }: FileParseErrorProps) => {
+  const modal = useModal()
+  const { t } = useTranslation()
+
+  const onClose = () => {
+    modal.resolve()
+    modal.hide()
+  }
+
+  // 错误提示内容
+  const renderErrorTips = () => {
+    if (errorCode === LOCAL_PARSER_PDF_PASSWORD_PROTECTED_ERROR) {
+      return (
+        <Text>
+          {t('This PDF is password-protected, so its content cannot be read. Remove the password and upload it again.')}
+        </Text>
+      )
+    }
+    if (errorCode === LOCAL_PARSER_FILE_TOO_LARGE_ERROR) {
+      return (
+        <Text>
+          {t('This PDF is too large to process (max {{size}}). Please upload a smaller file.', {
+            size: LOCAL_PARSER_MAX_PDF_FILE_SIZE_LABEL,
+          })}
+        </Text>
+      )
+    }
+    if (isSessionAttachmentRagAuthError(errorCode)) {
+      return (
+        <Text>
+          {t(
+            'This large file could not be indexed because no embedding model is configured. Please configure an embedding model in Settings, then retry this file. If you do not want to use retrieval, remove the file and upload a smaller attachment instead.'
+          )}
+        </Text>
+      )
+    }
+    if (isSessionAttachmentRagIndexingError(errorCode)) {
+      return (
+        <Text>
+          {t(
+            'Large file indexing failed. The file was parsed, but the local search index could not be saved. Remove this file and try uploading it again. If the problem continues, use a smaller file or Knowledge Base.'
+          )}
+        </Text>
+      )
+    }
+    if (errorCode === SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR) {
+      return (
+        <Text>
+          {t('This attachment is too large for chat attachments. Please upload it through Knowledge Base instead.')}
+        </Text>
+      )
+    }
+    if (errorCode === SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR) {
+      return (
+        <Text>
+          {t(
+            'This document contains too much text for chat attachments. Please upload it through Knowledge Base instead.'
+          )}
+        </Text>
+      )
+    }
+    if (errorCode === SESSION_ATTACHMENT_RAG_REQUIRES_TOOL_USE_MODEL_ERROR) {
+      return (
+        <Text>
+          {t(
+            'Large file Q&A requires a model with tool use support. Switch to a compatible model or remove this file.'
+          )}
+        </Text>
+      )
+    }
+
+    // 未知错误
+    return <Text>{t('Failed to parse file. Please try again or use a different file format.')}</Text>
+  }
+
+  return (
+    <AdaptiveModal opened={modal.visible} onClose={onClose} size="md" centered title={t('File Processing Error')}>
+      <Stack gap="md">
+        {fileName && (
+          <Text size="sm" c="chatbox-secondary">
+            {t('File')}: {fileName}
+          </Text>
+        )}
+
+        <Alert icon={<ScalableIcon size={20} icon={IconAlertCircle} />} color="orange" variant="light">
+          {renderErrorTips()}
+        </Alert>
+
+        <AdaptiveModal.Actions>
+          <AdaptiveModal.CloseButton onClick={onClose} />
+        </AdaptiveModal.Actions>
+      </Stack>
+    </AdaptiveModal>
+  )
+})
+
+export default FileParseError

@@ -1,0 +1,657 @@
+import NiceModal from '@ebay/nice-modal-react'
+import { Button, Flex, Stack, Transition } from '@mantine/core'
+import { useThrottledCallback } from '@mantine/hooks'
+import type { Session, Message as SessionMessage, SessionThreadBrief } from '@shared/types'
+import { getMessageText } from '@shared/utils/message'
+import {
+  IconArrowBarToUp,
+  IconArrowUp,
+  IconListTree,
+  IconMessagePlus,
+  IconPencil,
+  IconSwitch3,
+  IconTrash,
+} from '@tabler/icons-react'
+import { useAtomValue, useSetAtom } from 'jotai'
+import {
+  type FC,
+  forwardRef,
+  memo,
+  type UIEventHandler,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+import { useTranslation } from 'react-i18next'
+import { type StateSnapshot, Virtuoso, type VirtuosoHandle } from 'react-virtuoso'
+import { buildMessageRenderItems, type MessageRenderItem } from '@/components/chat/message-render-items'
+import { platformTypeAtom } from '@/hooks/useNeedRoomForWinControls'
+import { useIsSmallScreen } from '@/hooks/useScreenChange'
+import { cn } from '@/lib/utils'
+import platform from '@/platform'
+import * as atoms from '@/stores/atoms'
+import {
+  countCancellableGeneratingAssistantMessages,
+  getGenerationControlMessages,
+} from '@/stores/session/generation-state'
+import { moveThreadToConversations, removeMessage, removeThread, switchThread } from '@/stores/sessionActions'
+import { getAllMessageList, getCurrentThreadHistoryHash } from '@/stores/sessionHelpers'
+import { settingsStore } from '@/stores/settingsStore'
+import * as toastActions from '@/stores/toastActions'
+import { useUIStore } from '@/stores/uiStore'
+import ActionMenu from '../ActionMenu'
+
+import { ErrorBoundary } from '../common/ErrorBoundary'
+import { ScalableIcon } from '../common/ScalableIcon'
+import { BlockCodeCollapsedStateProvider } from '../Markdown'
+import ForkGroup from './ForkGroup'
+import ForkMarkerMessage from './ForkMarkerMessage'
+import Message from './Message'
+import MessageMinimapRail, { type MessageMinimapAnchor } from './MessageMinimapRail'
+import MessageNavigation, { ScrollToBottomButton } from './MessageNavigation'
+import { isUserNavigationMessage } from './message-navigation-utils'
+import SummaryMessage from './SummaryMessage'
+import { createSmoothFollowOutputController } from './smooth-follow-output'
+
+// LRU-like cache with max size to prevent unbounded memory growth
+const MAX_SCROLL_CACHE_SIZE = 100
+const sessionScrollPositionCache = new Map<string, StateSnapshot>()
+
+function setScrollPosition(sessionId: string, snapshot: StateSnapshot) {
+  // Delete and re-add to move to end (most recently used)
+  sessionScrollPositionCache.delete(sessionId)
+  sessionScrollPositionCache.set(sessionId, snapshot)
+
+  // Evict oldest entries if over limit
+  if (sessionScrollPositionCache.size > MAX_SCROLL_CACHE_SIZE) {
+    const firstKey = sessionScrollPositionCache.keys().next().value
+    if (firstKey) {
+      sessionScrollPositionCache.delete(firstKey)
+    }
+  }
+}
+
+// Export cleanup function for use when sessions are deleted
+export function clearScrollPositionCache(sessionId: string) {
+  sessionScrollPositionCache.delete(sessionId)
+}
+
+export interface MessageListRef {
+  scrollToTop: (behavior?: ScrollBehavior) => void
+  scrollToBottom: (behavior?: ScrollBehavior) => void
+  setIsNewMessage: (flag: boolean) => void
+}
+
+export interface MessageListProps {
+  className?: string
+  currentSession: Session
+}
+
+const MessageList = forwardRef<MessageListRef, MessageListProps>((props, ref) => {
+  const { t } = useTranslation()
+  const isSmallScreen = useIsSmallScreen()
+  const widthFull = useUIStore((s) => s.widthFull)
+
+  const { currentSession } = props
+
+  const currentThreadHash = useMemo(
+    () => currentSession && getCurrentThreadHistoryHash(currentSession),
+    [currentSession]
+  )
+  const currentMessageList = useMemo(() => getAllMessageList(currentSession), [currentSession])
+  const generationControlMessages = useMemo(() => getGenerationControlMessages(currentSession), [currentSession])
+  const generatingReplyCount = useMemo(
+    () => countCancellableGeneratingAssistantMessages(generationControlMessages),
+    [generationControlMessages]
+  )
+  const generationLocked = generatingReplyCount > 0
+
+  const latestSummaryMessageId = useMemo(() => {
+    for (let i = currentMessageList.length - 1; i >= 0; i--) {
+      if (currentMessageList[i].isSummary) {
+        return currentMessageList[i].id
+      }
+    }
+    return null
+  }, [currentMessageList])
+
+  const renderItems = useMemo<MessageRenderItem[]>(
+    () => buildMessageRenderItems(currentMessageList),
+    [currentMessageList]
+  )
+
+  const userMessageAnchors = useMemo<MessageMinimapAnchor[]>(() => {
+    const assistantTextByUserId = new Map<string, string>()
+
+    for (let i = 0; i < currentMessageList.length; i++) {
+      const message = currentMessageList[i]
+      if (!isUserNavigationMessage(message)) {
+        continue
+      }
+
+      for (let j = i + 1; j < currentMessageList.length; j++) {
+        const nextMessage = currentMessageList[j]
+        if (nextMessage.role === 'user') {
+          break
+        }
+        if (nextMessage.role === 'assistant' && !nextMessage.isSummary && !nextMessage.isForkMarker) {
+          assistantTextByUserId.set(message.id, getMessageText(nextMessage, true, false).trim())
+          break
+        }
+      }
+    }
+
+    return renderItems.flatMap((item, itemIndex) =>
+      item.messages.filter(isUserNavigationMessage).map((message) => ({
+        messageId: message.id,
+        itemIndex,
+        text: getMessageText(message, true, false).trim(),
+        assistantText: assistantTextByUserId.get(message.id),
+      }))
+    )
+  }, [currentMessageList, renderItems])
+  const showMinimap = !isSmallScreen && userMessageAnchors.length > 0
+
+  const virtuoso = useRef<VirtuosoHandle>(null)
+  const [smoothFollowOutput] = useState(() =>
+    createSmoothFollowOutputController({
+      scrollToBottom: (behavior) => virtuoso.current?.scrollTo({ top: Infinity, behavior }),
+      stopScrolling: (scrollTop) => virtuoso.current?.scrollTo({ top: scrollTop, behavior: 'auto' }),
+      // Mobile WebViews can fall behind when a smooth scroll is retargeted on every streaming height change.
+      getScrollBehavior: platform.type === 'mobile' ? () => 'auto' : undefined,
+    })
+  )
+  const messageListRef = useRef<HTMLDivElement>(null)
+  const [messageViewportHeight, setMessageViewportHeight] = useState(0)
+  const [isNewMessage, setIsNewMessage] = useState(false)
+
+  const setMessageListElement = useUIStore((s) => s.setMessageListElement)
+  const setMessageScrolling = useUIStore((s) => s.setMessageScrolling)
+
+  // message navigation handlers
+  const [messageNavigationVisible, setMessageNavigationVisible] = useState(false)
+  const handleMessageNavigationVisibleChanged = useCallback((v: boolean) => setMessageNavigationVisible(v), [])
+
+  const handleScrollToTop = useCallback(() => {
+    smoothFollowOutput.pause()
+    virtuoso.current?.scrollToIndex({ index: 0, align: 'start', behavior: 'smooth' })
+  }, [smoothFollowOutput])
+
+  const handleScrollToBottom = useCallback(() => {
+    smoothFollowOutput.resume()
+    virtuoso.current?.scrollTo({ top: Infinity, behavior: 'smooth' })
+  }, [smoothFollowOutput])
+
+  const handleMinimapJump = useCallback(
+    (anchor: MessageMinimapAnchor) => {
+      smoothFollowOutput.pause()
+      virtuoso.current?.scrollToIndex({ index: anchor.itemIndex, align: 'start', behavior: 'smooth' })
+    },
+    [smoothFollowOutput]
+  )
+
+  const handleScrollToPrev = useCallback(() => {
+    smoothFollowOutput.pause()
+    if (messageListRef?.current && virtuoso?.current) {
+      const containerRect = messageListRef.current.getBoundingClientRect()
+      for (let i = 0; i < renderItems.length; i++) {
+        // 此处原本判断 role 的逻辑已在 renderItems 中处理
+        const msgElement = messageListRef.current.querySelector(
+          `[data-testid="virtuoso-item-list"] > [data-index="${i}"]`
+        )
+        if (msgElement) {
+          const rect = msgElement.getBoundingClientRect()
+          // 找到第一个出现在可视区域顶部的元素，滚动到上一条用户消息
+          // +2 tolerance: smooth scroll + virtuoso height estimation can leave
+          // the previous element's bottom a sub-pixel into the viewport,
+          // causing the anchor to land one item too early.
+          if (rect.bottom > containerRect.top + 2) {
+            // If the current element's top is scrolled above the viewport and it
+            // contains a user message (e.g. a long assistant response in a group),
+            // scroll to the top of THIS element first to bring the question back.
+            if (rect.top < containerRect.top - 2 && renderItems[i].messages.some(isUserNavigationMessage)) {
+              virtuoso.current.scrollToIndex({
+                index: i,
+                align: 'start',
+                offset: isSmallScreen ? -28 : 0,
+                behavior: 'smooth',
+              })
+              return
+            }
+            for (let j = i - 1; j >= 0; j--) {
+              if (renderItems[j].messages.some(isUserNavigationMessage)) {
+                virtuoso.current.scrollToIndex({
+                  index: j,
+                  align: 'start',
+                  offset: isSmallScreen ? -28 : 0,
+                  behavior: 'smooth',
+                })
+                return
+              }
+            }
+            // 没有上一条用户消息了，滚动到顶部
+            virtuoso.current.scrollToIndex({ index: 0, align: 'start', behavior: 'smooth' })
+            return
+          }
+        }
+      }
+    }
+  }, [renderItems, isSmallScreen, smoothFollowOutput])
+
+  const handleScrollToNext = useCallback(() => {
+    smoothFollowOutput.pause()
+    if (messageListRef?.current && virtuoso?.current) {
+      const containerRect = messageListRef.current.getBoundingClientRect()
+      for (let i = 0; i < renderItems.length; i++) {
+        const msgElement = messageListRef.current.querySelector(
+          `[data-testid="virtuoso-item-list"] > [data-index="${i}"]`
+        )
+        if (msgElement) {
+          const rect = msgElement.getBoundingClientRect()
+          // 找到第一个出现在可视区域顶部的元素，滚动到下一条用户消息
+          // +2 tolerance: see handleScrollToPrev comment
+          if (rect.bottom > containerRect.top + 2) {
+            for (let j = i + 1; j < renderItems.length; j++) {
+              if (renderItems[j].messages.some(isUserNavigationMessage)) {
+                virtuoso.current.scrollToIndex({ index: j, align: 'start', behavior: 'smooth' })
+                return
+              }
+            }
+            // 没有下一条用户消息了，滚动到底部
+            virtuoso.current.scrollToIndex({ index: renderItems.length - 1, align: 'end', behavior: 'smooth' })
+            return
+          }
+        }
+      }
+    }
+  }, [renderItems, smoothFollowOutput])
+
+  const [atBottom, setAtBottom] = useState(false)
+  const [atTop, setAtTop] = useState(false)
+
+  const [showScrollToPrev, setShowScrollToPrev] = useState(false)
+  const lastScrollTop = useRef<number>()
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+      }
+    }
+  }, [])
+
+  const handleScrollTopThrottled = useThrottledCallback((scrollTop?: number) => {
+    if (typeof scrollTop === 'number' && typeof lastScrollTop.current === 'number') {
+      if (scrollTop > 0 && scrollTop < lastScrollTop.current) {
+        // 是向上滚动
+        setShowScrollToPrev(true)
+        if (timerRef.current) {
+          clearTimeout(timerRef.current)
+          timerRef.current = null
+        }
+        timerRef.current = setTimeout(() => setShowScrollToPrev(false), 3000)
+      } else {
+        setShowScrollToPrev(false)
+        if (timerRef.current) {
+          clearTimeout(timerRef.current)
+          timerRef.current = null
+        }
+      }
+    }
+    lastScrollTop.current = scrollTop
+  }, 256)
+
+  const handleScroll = useCallback<UIEventHandler>(
+    (e) => {
+      const scrollTop = e.currentTarget.scrollTop
+      const maxScrollTop = e.currentTarget.scrollHeight - e.currentTarget.clientHeight
+      if (smoothFollowOutput.handleScroll(scrollTop, maxScrollTop)) {
+        setAtBottom(false)
+      } else if (smoothFollowOutput.isFollowing()) {
+        setAtBottom(true)
+      }
+      if (e.currentTarget.scrollHeight - (scrollTop + e.currentTarget.clientHeight) >= 0) {
+        handleScrollTopThrottled(scrollTop)
+      }
+    },
+    [handleScrollTopThrottled, smoothFollowOutput]
+  )
+  // message navigation handlers end
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 仅执行一次
+  useEffect(() => {
+    setMessageScrolling(virtuoso)
+    const currentVirtuoso = virtuoso.current // 清理时 virtuoso.current 已经为 null
+    return () => {
+      currentVirtuoso?.getState((state) => {
+        if (state.ranges.length > 0) {
+          // useEffect 可能执行两次，这里根据 ranges 判断是否为第一次 useEffect 严格测试导致的执行
+          setScrollPosition(currentSession.id, state)
+        }
+      })
+    }
+  }, [])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 仅执行一次
+  useEffect(() => {
+    setMessageListElement(messageListRef)
+  }, [])
+
+  useEffect(() => {
+    return () => smoothFollowOutput.dispose()
+  }, [smoothFollowOutput])
+
+  useEffect(() => {
+    const element = messageListRef.current
+    if (!element) {
+      return
+    }
+
+    const updateViewportHeight = () => {
+      setMessageViewportHeight(element.clientHeight)
+    }
+
+    updateViewportHeight()
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updateViewportHeight)
+      return () => {
+        window.removeEventListener('resize', updateViewportHeight)
+      }
+    }
+
+    const observer = new ResizeObserver(() => {
+      updateViewportHeight()
+    })
+
+    observer.observe(element)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
+
+  const platformType = useAtomValue(platformTypeAtom)
+
+  const renderMessageBlock = useCallback(
+    (msg: SessionMessage, options: { isFirstItem: boolean; isLastItem: boolean }) => {
+      return (
+        <Stack key={msg.id} gap={0} pt={msg.role === 'user' ? 4 : 0}>
+          {currentThreadHash[msg.id] && (
+            <ThreadLabel thread={currentThreadHash[msg.id]} sessionId={currentSession.id} />
+          )}
+          <ErrorBoundary name={`message-item`}>
+            {msg.isForkMarker ? (
+              <ForkMarkerMessage
+                sourceSessionId={msg.forkedFromSessionId}
+                className={options.isFirstItem ? 'pt-4' : options.isLastItem ? '!pb-4' : ''}
+              />
+            ) : msg.isSummary ? (
+              <SummaryMessage
+                msg={msg}
+                className={options.isFirstItem ? 'pt-4' : options.isLastItem ? '!pb-4' : ''}
+                isLatestSummary={msg.id === latestSummaryMessageId}
+                onDelete={() => {
+                  if (generationLocked) {
+                    toastActions.add(t('Wait for the current replies to finish'), 2500)
+                    return
+                  }
+                  void removeMessage(currentSession.id, msg.id)
+                }}
+                sessionId={currentSession.id}
+              />
+            ) : (
+              <Message
+                id={msg.id}
+                msg={msg}
+                sessionId={currentSession.id}
+                sessionType={currentSession.type || 'chat'}
+                className={options.isFirstItem ? 'pt-4' : options.isLastItem ? '!pb-4' : ''}
+                collapseThreshold={msg.role === 'system' ? 150 : undefined}
+                buttonGroup={options.isLastItem && msg.role === 'assistant' ? 'always' : 'auto'}
+                generatingReplyCount={generatingReplyCount}
+                generationLocked={generationLocked}
+                assistantAvatarKey={currentSession.assistantAvatarKey}
+                sessionPicUrl={currentSession.picUrl}
+              />
+            )}
+          </ErrorBoundary>
+          {/* Saved alternatives stay inside the pivot block (newest-first in ForkGroup), so the active branch appears last. */}
+          {currentSession.messageForksHash?.[msg.id] && currentSession.messageForksHash[msg.id].lists.length > 1 && (
+            <ForkGroup
+              sessionId={currentSession.id}
+              sessionType={currentSession.type || 'chat'}
+              msgId={msg.id}
+              forks={currentSession.messageForksHash[msg.id]}
+              generatingReplyCount={generatingReplyCount}
+              generationLocked={generationLocked}
+              assistantAvatarKey={currentSession.assistantAvatarKey}
+              sessionPicUrl={currentSession.picUrl}
+            />
+          )}
+        </Stack>
+      )
+    },
+    [currentSession, currentThreadHash, generatingReplyCount, generationLocked, latestSummaryMessageId, t]
+  )
+
+  useImperativeHandle(ref, () => ({
+    scrollToTop: (behavior = 'auto') => {
+      smoothFollowOutput.pause()
+      virtuoso.current?.scrollTo({ top: 0, behavior })
+    },
+    scrollToBottom: (behavior = 'auto') => {
+      smoothFollowOutput.resume()
+      virtuoso.current?.scrollTo({ top: Infinity, behavior })
+    },
+    setIsNewMessage: (value: boolean) => setIsNewMessage(value),
+  }))
+
+  return (
+    <div className={cn('w-full h-full mx-auto', props.className)}>
+      <BlockCodeCollapsedStateProvider defaultCollapsed={!!settingsStore.getState().autoCollapseCodeBlock}>
+        <div
+          className={cn('overflow-hidden h-full pr-0 relative', showMinimap ? 'pl-[28px]' : 'pl-1 sm:pl-0')}
+          ref={messageListRef}
+        >
+          {/* Virtuoso smooths appended items but snaps same-item height growth; the controller below owns both cases. */}
+          <Virtuoso
+            style={{ scrollbarGutter: 'stable' }}
+            className={platformType === 'win32' ? 'scrollbar-custom' : ''}
+            data={renderItems}
+            ref={virtuoso}
+            followOutput={false}
+            {...(sessionScrollPositionCache.has(currentSession.id)
+              ? {
+                  restoreStateFrom: sessionScrollPositionCache.get(currentSession.id),
+                  // 需要额外设置 initialScrollTop，否则恢复位置后 scrollTop 为 0。这时如果用户没有滚动，那么下次保存时 scrollTop 将记为 0，导致下一次恢复时位置始终为顶部。
+                  initialScrollTop: sessionScrollPositionCache.get(currentSession.id)?.scrollTop,
+                }
+              : {
+                  initialTopMostItemIndex: renderItems.length - 1,
+                })}
+            increaseViewportBy={{ top: 2000, bottom: 2000 }}
+            itemContent={(index, item) => {
+              const itemClassName = widthFull ? 'w-full' : 'max-w-4xl mx-auto'
+              const isFirstItem = index === 0
+              const isLastItem = index === renderItems.length - 1
+
+              if (item.type === 'group') {
+                return (
+                  <div className={itemClassName}>
+                    <div
+                      className="flex flex-col pt-5"
+                      style={
+                        messageViewportHeight > 0 && isNewMessage && isLastItem
+                          ? { minHeight: `${messageViewportHeight * 0.85}px` }
+                          : undefined
+                      } // key
+                    >
+                      {item.messages.map((message, messageIndex) =>
+                        renderMessageBlock(message, {
+                          isFirstItem: isFirstItem && messageIndex === 0,
+                          isLastItem: isLastItem && messageIndex === item.messages.length - 1,
+                        })
+                      )}
+                      {/* <div aria-hidden="true" className="flex-1" /> */}
+                    </div>
+                  </div>
+                )
+              }
+
+              return (
+                <div className={itemClassName}>{renderMessageBlock(item.messages[0], { isFirstItem, isLastItem })}</div>
+              )
+            }}
+            atTopStateChange={setAtTop}
+            atBottomStateChange={(nextAtBottom) => {
+              smoothFollowOutput.handleAtBottomChange(nextAtBottom)
+              setAtBottom(nextAtBottom || smoothFollowOutput.isFollowing())
+            }}
+            totalListHeightChanged={smoothFollowOutput.handleHeightChange}
+            onScroll={handleScroll}
+          />
+
+          {showMinimap && <MessageMinimapRail anchors={userMessageAnchors} onJump={handleMinimapJump} />}
+
+          {!isSmallScreen ? (
+            <MessageNavigation
+              visible={messageNavigationVisible}
+              onVisibleChange={handleMessageNavigationVisibleChanged}
+              onScrollToTop={handleScrollToTop}
+              onScrollToBottom={handleScrollToBottom}
+              onScrollToPrev={handleScrollToPrev}
+              onScrollToNext={handleScrollToNext}
+            />
+          ) : (
+            <>
+              <Transition mounted={showScrollToPrev && !atTop} transition="fade-down">
+                {(transitionStyle) => (
+                  <Flex
+                    style={transitionStyle}
+                    className="absolute z-10 top-0 left-0 right-0 leading-tight bg-chatbox-background-secondary"
+                  >
+                    {[
+                      { text: t('Return to the top'), icon: IconArrowBarToUp, onClick: handleScrollToTop },
+                      {
+                        text: t('Back to previous message'),
+                        icon: IconArrowUp,
+                        onClick: handleScrollToPrev,
+                      },
+                    ].map((item, idx) => (
+                      <Button
+                        key={item.text}
+                        variant="transparent"
+                        className={cn('w-1/2', idx === 0 ? 'border-r border-r-chatbox-border-primary' : '')}
+                        classNames={{
+                          section: '!mr-xxs',
+                        }}
+                        size="xs"
+                        h="auto"
+                        py={6}
+                        c="chatbox-tertiary"
+                        onClick={item.onClick}
+                        leftSection={<ScalableIcon icon={item.icon} size={16} />}
+                      >
+                        {item.text}
+                      </Button>
+                    ))}
+                  </Flex>
+                )}
+              </Transition>
+              <Transition mounted={!atBottom} transition="slide-up">
+                {(transitionStyle) => <ScrollToBottomButton onClick={handleScrollToBottom} style={transitionStyle} />}
+              </Transition>
+            </>
+          )}
+        </div>
+      </BlockCodeCollapsedStateProvider>
+    </div>
+  )
+})
+
+export default memo(MessageList)
+
+type ThreadLabelProps = {
+  sessionId: string
+  thread: SessionThreadBrief
+}
+const ThreadLabel: FC<ThreadLabelProps> = memo(({ thread, sessionId }) => {
+  const { t } = useTranslation()
+  const setShowHistoryDrawer = useSetAtom(atoms.showThreadHistoryDrawerAtom)
+
+  const handleOpenHistoryDrawer = useCallback(() => {
+    setShowHistoryDrawer(thread.id || true)
+  }, [setShowHistoryDrawer, thread.id])
+
+  const handleEditThreadName = useCallback(async () => {
+    if (!thread.id) return
+    await NiceModal.show('thread-name-edit', { sessionId, threadId: thread.id })
+  }, [sessionId, thread.id])
+
+  const handleContinueThread = useCallback(() => {
+    if (!thread.id) return
+    void switchThread(sessionId, thread.id)
+  }, [sessionId, thread.id])
+
+  const handleMoveToConversations = useCallback(() => {
+    if (!thread.id) return
+    void moveThreadToConversations(sessionId, thread.id)
+  }, [sessionId, thread.id])
+
+  const handleDeleteThread = useCallback(() => {
+    if (!thread.id) return
+    void removeThread(sessionId, thread.id)
+  }, [sessionId, thread.id])
+
+  return (
+    <div className="text-center pb-4 pt-8">
+      <ActionMenu
+        position="bottom"
+        items={[
+          {
+            text: t('Edit Thread Name'),
+            icon: IconPencil,
+            onClick: handleEditThreadName,
+          },
+          {
+            text: t('Show in Thread List'),
+            icon: IconListTree,
+            onClick: handleOpenHistoryDrawer,
+          },
+          {
+            text: t('Continue this thread'),
+            icon: IconSwitch3,
+            onClick: handleContinueThread,
+          },
+          {
+            text: t('Move to Conversations'),
+            icon: IconMessagePlus,
+            onClick: handleMoveToConversations,
+          },
+          { divider: true },
+          {
+            doubleCheck: true,
+            text: t('delete'),
+            icon: IconTrash,
+            onClick: handleDeleteThread,
+          },
+        ]}
+      >
+        <span
+          className="cursor-pointer font-bold border-solid border rounded-xxl py-2 px-3 border-slate-400/25"
+          onDoubleClick={handleOpenHistoryDrawer}
+          // onClick={onClick}
+        >
+          <span className="pr-1 opacity-60">#</span>
+          <span className="truncate inline-block align-bottom max-w-[calc(50%-4rem)] md:max-w-[calc(30%-4rem)]">
+            {thread.name || t('New Thread')}
+          </span>
+          {thread.createdAtLabel && <span className="pl-1 opacity-60 text-xs">{thread.createdAtLabel}</span>}
+        </span>
+      </ActionMenu>
+    </div>
+  )
+})

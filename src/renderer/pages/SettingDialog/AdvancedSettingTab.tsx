@@ -112,13 +112,13 @@ export default function AdvancedSettingTab(props: Props) {
         <Box className="mt-2">
           <FormGroup>
             <FormControlLabel
-              control={<Switch />}
-              label={t('Automatic updates')}
-              checked={settingsEdit.autoUpdate}
+              control={<Switch disabled />}
+              label={t('Automatic updates') }
+              checked={false}
               onChange={(e, checked) =>
                 setSettingsEdit({
                   ...settingsEdit,
-                  autoUpdate: checked,
+                  autoUpdate: false,
                 })
               }
             />

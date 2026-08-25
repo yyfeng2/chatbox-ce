@@ -1,4 +1,5 @@
 import type { CopilotDetail, Session, Settings } from '@shared/types'
+import { v4 as uuidv4 } from 'uuid'
 import {
   BACKUP_MANIFEST_PATH,
   backupEntryByteLimit,
@@ -117,7 +118,7 @@ async function findAvailableCollisionKey(storage: BackupStorage, originalKey: st
         break
       }
     }
-    const candidate = `${candidatePrefix}:${globalThis.crypto.randomUUID()}`
+    const candidate = `${candidatePrefix}:${uuidv4()}`
     if (!reserved.has(candidate) && (await storage.getBlob(candidate)) === null) return candidate
   }
   throw new Error(`Could not allocate a resource key for: ${originalKey}`)
@@ -170,7 +171,7 @@ export async function isZipBackupFile(file: File): Promise<boolean> {
 }
 
 export async function importBackupArchive(file: File, options: BackupImportOptions): Promise<BackupImportResult> {
-  const importId = globalThis.crypto.randomUUID()
+  const importId = uuidv4()
   const tempPrefix = `__chatbox_backup_import:${importId}`
   const stagedEntries = new Map<string, StagedEntry>()
   const tempStoreKeys: string[] = []

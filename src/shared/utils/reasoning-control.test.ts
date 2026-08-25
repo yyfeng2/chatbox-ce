@@ -462,6 +462,30 @@ describe('reasoning-control', () => {
     expect(getReasoningControlCapabilities(ModelProviderEnum.DeepSeek, modelInfo).supported).toBe(false)
   })
 
+  it('lets a custom-provider model opt in to thinking controls via the reasoning capability flag', () => {
+    // Custom providers wrap opaque upstream endpoints, so the user's explicit
+    // reasoning-capability flag (ModelEdit toggle) is what enables the control.
+    const openaiModel: ProviderModelInfo = { modelId: 'my-reasoning-model', apiStyle: 'openai', capabilities: ['reasoning'] }
+    expect(getReasoningControlCapabilities('my-custom-provider', openaiModel).supported).toBe(true)
+    expect(getReasoningControlCapabilities('my-custom-provider', openaiModel).kind).toBe('openai-effort')
+
+    const claudeModel: ProviderModelInfo = { modelId: 'my-claude-model', apiStyle: 'anthropic', capabilities: ['reasoning'] }
+    expect(getReasoningControlCapabilities('my-custom-provider', claudeModel).kind).toBe('anthropic-effort')
+
+    // The wire format matches the effective provider (API style) and reads back to
+    // the level the user picked.
+    const highOpenAI = getReasoningProviderOptions('my-custom-provider', openaiModel, 'high')
+    expect(highOpenAI?.openai?.reasoningEffort).toBe('high')
+    expect(getReasoningControlLevel('my-custom-provider', openaiModel, highOpenAI)).toBe('high')
+
+    const highClaude = getReasoningProviderOptions('my-custom-provider', claudeModel, 'high')
+    expect(highClaude?.claude?.effort).toBe('high')
+    expect(getReasoningControlLevel('my-custom-provider', claudeModel, highClaude)).toBe('high')
+
+    // The flag alone does not enable controls for built-in providers (unreliable).
+    expect(getReasoningControlCapabilities(ModelProviderEnum.OpenAI, { modelId: 'gpt-4o', capabilities: ['reasoning'] }).supported).toBe(false)
+  })
+
   it('maps xAI Grok 4.3 to OpenAI-compatible reasoning effort', () => {
     const offOptions = getReasoningProviderOptions(ModelProviderEnum.XAI, model('grok-4.3'), 'off')
     const lowOptions = getReasoningProviderOptions(ModelProviderEnum.XAI, model('grok-4.3'), 'low')

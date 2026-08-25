@@ -206,26 +206,9 @@ function DesktopUpdateSection() {
   const updateVersion = useUpdateStore((s) => s.version)
   const error = useUpdateStore((s) => s.error)
 
+  // CE 定制版:禁用更新检查。手动检查入口也置为 no-op,不再请求已下线的旧服务。
   const handleCheck = async () => {
-    useUpdateStore.setState({ status: 'checking', error: null })
-    try {
-      const result = await platform.checkForUpdate?.()
-      // If check was skipped (another check already in progress), reset UI
-      if (result && !result.started) {
-        const { status: currentStatus } = useUpdateStore.getState()
-        if (currentStatus === 'checking') {
-          useUpdateStore.setState({ status: 'idle' })
-        }
-      }
-    } catch {
-      useUpdateStore.setState({ status: 'idle' })
-    }
-    // Safety timeout: if still stuck at 'checking' after 30s, reset
-    setTimeout(() => {
-      if (useUpdateStore.getState().status === 'checking') {
-        useUpdateStore.setState({ status: 'idle' })
-      }
-    }, 30_000)
+    useUpdateStore.setState({ status: 'idle', error: null })
   }
 
   const handleInstall = installUpdate
@@ -297,9 +280,9 @@ function DesktopUpdateSection() {
 
     default:
       return (
-        <Button size="xs" variant="default" radius="lg" className="flex-shrink-0" onClick={handleCheck}>
-          {t('Check Update')}
-        </Button>
+        <Text size="xs" c="chatbox-tertiary" className="flex-shrink-0">
+          {t('Already up to date')}
+        </Text>
       )
   }
 }

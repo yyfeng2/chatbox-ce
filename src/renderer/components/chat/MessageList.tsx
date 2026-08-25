@@ -2,7 +2,6 @@ import NiceModal from '@ebay/nice-modal-react'
 import { Button, Flex, Stack, Transition } from '@mantine/core'
 import { useThrottledCallback } from '@mantine/hooks'
 import type { Session, Message as SessionMessage, SessionThreadBrief } from '@shared/types'
-import { getMessageText } from '@shared/utils/message'
 import {
   IconArrowBarToUp,
   IconArrowUp,
@@ -52,7 +51,7 @@ import ForkMarkerMessage from './ForkMarkerMessage'
 import Message from './Message'
 import MessageMinimapRail, { type MessageMinimapAnchor } from './MessageMinimapRail'
 import MessageNavigation, { ScrollToBottomButton } from './MessageNavigation'
-import { isUserNavigationMessage } from './message-navigation-utils'
+import { areMinimapAnchorsEqual, getMessagePreviewText, isUserNavigationMessage } from './message-navigation-utils'
 import SummaryMessage from './SummaryMessage'
 import { createSmoothFollowOutputController } from './smooth-follow-output'
 
@@ -123,6 +122,10 @@ const MessageList = forwardRef<MessageListRef, MessageListProps>((props, ref) =>
     [currentMessageList]
   )
 
+  // Anchors carry only short preview prefixes and reuse the previous array
+  // when nothing visible changed, so per-chunk session cache updates neither
+  // re-join the whole conversation text nor re-render the memoized rail.
+  const previousAnchorsRef = useRef<MessageMinimapAnchor[]>([])
   const userMessageAnchors = useMemo<MessageMinimapAnchor[]>(() => {
     const assistantTextByUserId = new Map<string, string>()
 
@@ -138,20 +141,26 @@ const MessageList = forwardRef<MessageListRef, MessageListProps>((props, ref) =>
           break
         }
         if (nextMessage.role === 'assistant' && !nextMessage.isSummary && !nextMessage.isForkMarker) {
-          assistantTextByUserId.set(message.id, getMessageText(nextMessage, true, false).trim())
+          assistantTextByUserId.set(message.id, getMessagePreviewText(nextMessage))
           break
         }
       }
     }
 
-    return renderItems.flatMap((item, itemIndex) =>
+    const anchors = renderItems.flatMap((item, itemIndex) =>
       item.messages.filter(isUserNavigationMessage).map((message) => ({
         messageId: message.id,
         itemIndex,
-        text: getMessageText(message, true, false).trim(),
+        text: getMessagePreviewText(message),
         assistantText: assistantTextByUserId.get(message.id),
       }))
     )
+
+    if (areMinimapAnchorsEqual(previousAnchorsRef.current, anchors)) {
+      return previousAnchorsRef.current
+    }
+    previousAnchorsRef.current = anchors
+    return anchors
   }, [currentMessageList, renderItems])
   const showMinimap = !isSmallScreen && userMessageAnchors.length > 0
 

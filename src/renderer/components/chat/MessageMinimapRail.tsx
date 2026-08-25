@@ -1,5 +1,6 @@
 import {
   type CSSProperties,
+  type KeyboardEvent,
   type MouseEvent,
   memo,
   type UIEvent,
@@ -17,6 +18,8 @@ const MAX_LINE_WIDTH = 26
 const HOVER_DISTANCE = 60
 const HOVER_FALLOFF_POWER = 2
 const PREVIEW_MARGIN = 28
+const WINDOW_OVERSCAN_ITEMS = 8
+const DEFAULT_VIEWPORT_HEIGHT = 360
 
 export type MessageMinimapAnchor = {
   messageId: string
@@ -34,6 +37,20 @@ export type MessageMinimapRailProps = {
 type HoveredAnchor = {
   anchor: MessageMinimapAnchor
   index: number
+}
+
+export function getMinimapRenderRange(
+  anchorCount: number,
+  scrollTop: number,
+  viewportHeight: number
+): { start: number; end: number } {
+  const effectiveViewportHeight = viewportHeight > 0 ? viewportHeight : DEFAULT_VIEWPORT_HEIGHT
+  const firstVisibleIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT))
+  const visibleItemCount = Math.max(1, Math.ceil(effectiveViewportHeight / ITEM_HEIGHT))
+  const start = Math.max(0, firstVisibleIndex - WINDOW_OVERSCAN_ITEMS)
+  const end = Math.min(anchorCount, firstVisibleIndex + visibleItemCount + WINDOW_OVERSCAN_ITEMS)
+
+  return { start, end }
 }
 
 function smoothstep(value: number) {
@@ -59,6 +76,8 @@ const edgeFadeBlurStyle: CSSProperties = {
 const MessageMinimapRail = ({ anchors, className, onJump }: MessageMinimapRailProps) => {
   const { t } = useTranslation()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const anchorButtonRefs = useRef(new Map<number, HTMLButtonElement>())
+  const pendingFocusIndexRef = useRef<number | null>(null)
   const hasScrolledToInitialEndRef = useRef(false)
   const contentHeight = anchors.length * ITEM_HEIGHT
 
@@ -67,6 +86,7 @@ const MessageMinimapRail = ({ anchors, className, onJump }: MessageMinimapRailPr
   const [viewportHeight, setViewportHeight] = useState(0)
   const [scrollHeight, setScrollHeight] = useState(0)
   const [hoveredAnchor, setHoveredAnchor] = useState<HoveredAnchor | null>(null)
+  const [keyboardAnchorIndex, setKeyboardAnchorIndex] = useState(0)
 
   const updatePointerPosition = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
@@ -111,6 +131,7 @@ const MessageMinimapRail = ({ anchors, className, onJump }: MessageMinimapRailPr
   }, [])
 
   const handleAnchorFocus = useCallback((anchor: MessageMinimapAnchor, index: number) => {
+    setKeyboardAnchorIndex(index)
     setHoveredAnchor({ anchor, index })
     setPointerContentY(index * ITEM_HEIGHT + ITEM_HEIGHT / 2)
   }, [])
@@ -190,6 +211,84 @@ const MessageMinimapRail = ({ anchors, className, onJump }: MessageMinimapRailPr
     }
   }, [contentHeight])
 
+  const renderRange = getMinimapRenderRange(anchors.length, scrollTop, viewportHeight)
+
+  useEffect(() => {
+    if (anchors.length === 0) return
+    if (keyboardAnchorIndex >= renderRange.start && keyboardAnchorIndex < renderRange.end) return
+
+    const firstVisibleIndex = Math.min(anchors.length - 1, Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT)))
+    setKeyboardAnchorIndex(firstVisibleIndex)
+  }, [anchors.length, keyboardAnchorIndex, renderRange.end, renderRange.start, scrollTop])
+
+  useEffect(() => {
+    const pendingFocusIndex = pendingFocusIndexRef.current
+    if (pendingFocusIndex === null) return
+
+    const button = anchorButtonRefs.current.get(pendingFocusIndex)
+    if (!button) return
+
+    pendingFocusIndexRef.current = null
+    button.focus()
+  })
+
+  const focusAnchorAtIndex = useCallback(
+    (requestedIndex: number) => {
+      if (anchors.length === 0) return
+
+      const index = Math.min(anchors.length - 1, Math.max(0, requestedIndex))
+      const scrollArea = scrollAreaRef.current
+      if (scrollArea) {
+        const effectiveViewportHeight = scrollArea.clientHeight || viewportHeight || DEFAULT_VIEWPORT_HEIGHT
+        const itemTop = index * ITEM_HEIGHT
+        const itemBottom = itemTop + ITEM_HEIGHT
+        let nextScrollTop = scrollArea.scrollTop
+
+        if (itemTop < nextScrollTop) {
+          nextScrollTop = itemTop
+        } else if (itemBottom > nextScrollTop + effectiveViewportHeight) {
+          nextScrollTop = itemBottom - effectiveViewportHeight
+        }
+
+        const maxScrollTop = Math.max(0, contentHeight - effectiveViewportHeight)
+        nextScrollTop = Math.min(maxScrollTop, Math.max(0, nextScrollTop))
+        if (nextScrollTop !== scrollArea.scrollTop) {
+          scrollArea.scrollTop = nextScrollTop
+          setScrollTop(nextScrollTop)
+        }
+      }
+
+      pendingFocusIndexRef.current = index
+      setKeyboardAnchorIndex(index)
+    },
+    [anchors.length, contentHeight, viewportHeight]
+  )
+
+  const handleAnchorKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+      let nextIndex: number | null = null
+      switch (event.key) {
+        case 'ArrowUp':
+          nextIndex = index - 1
+          break
+        case 'ArrowDown':
+          nextIndex = index + 1
+          break
+        case 'Home':
+          nextIndex = 0
+          break
+        case 'End':
+          nextIndex = anchors.length - 1
+          break
+      }
+
+      if (nextIndex === null) return
+      event.preventDefault()
+      focusAnchorAtIndex(nextIndex)
+    },
+    [anchors.length, focusAnchorAtIndex]
+  )
+
   if (anchors.length === 0) {
     return null
   }
@@ -210,6 +309,7 @@ const MessageMinimapRail = ({ anchors, className, onJump }: MessageMinimapRailPr
           Math.max(PREVIEW_MARGIN, viewportHeight - PREVIEW_MARGIN)
         )
       : PREVIEW_MARGIN
+  const renderedAnchors = anchors.slice(renderRange.start, renderRange.end)
 
   return (
     <div
@@ -231,8 +331,9 @@ const MessageMinimapRail = ({ anchors, className, onJump }: MessageMinimapRailPr
         onMouseLeave={handleMouseLeave}
         onScroll={handleScroll}
       >
-        <div style={{ height: contentHeight, transform: `translateY(${contentOffset}px)` }}>
-          {anchors.map((anchor, index) => {
+        <div className="relative" style={{ height: contentHeight, transform: `translateY(${contentOffset}px)` }}>
+          {renderedAnchors.map((anchor, visibleIndex) => {
+            const index = renderRange.start + visibleIndex
             const centerY = index * ITEM_HEIGHT + ITEM_HEIGHT / 2
             const influenceCenterY =
               hoveredAnchor !== null ? hoveredAnchor.index * ITEM_HEIGHT + ITEM_HEIGHT / 2 : pointerContentY
@@ -248,17 +349,25 @@ const MessageMinimapRail = ({ anchors, className, onJump }: MessageMinimapRailPr
 
             return (
               <button
+                ref={(button) => {
+                  if (button) anchorButtonRefs.current.set(index, button)
+                  else anchorButtonRefs.current.delete(index)
+                }}
                 key={anchor.messageId}
                 type="button"
                 className={cn(
-                  'flex h-3 w-12 cursor-default items-center justify-start border-0 bg-transparent p-0 pl-2 outline-none',
+                  'absolute left-0 flex h-3 w-12 cursor-default items-center justify-start border-0 bg-transparent p-0 pl-2 outline-none',
                   'focus-visible:ring-1 focus-visible:ring-[var(--chatbox-border-brand)]'
                 )}
+                style={{ top: index * ITEM_HEIGHT }}
                 aria-label={jumpLabel}
+                aria-keyshortcuts="ArrowUp ArrowDown Home End"
                 title={previewText}
+                tabIndex={index === keyboardAnchorIndex ? 0 : -1}
                 onMouseEnter={() => setHoveredAnchor({ anchor, index })}
                 onFocus={() => handleAnchorFocus(anchor, index)}
                 onBlur={handleAnchorBlur}
+                onKeyDown={(event) => handleAnchorKeyDown(event, index)}
                 onClick={() => onJump?.(anchor)}
               >
                 <span

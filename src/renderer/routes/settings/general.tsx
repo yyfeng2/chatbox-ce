@@ -486,19 +486,21 @@ export function RouteComponent() {
             />
             <Switch
               label={t('Automatic updates')}
-              checked={settings.autoUpdate}
+              disabled
+              checked={false}
               onChange={(e) =>
                 setSettings({
-                  autoUpdate: e.currentTarget.checked,
+                  autoUpdate: false,
                 })
               }
             />
             <Switch
               label={t('Beta updates')}
-              checked={settings.betaUpdate}
+              disabled
+              checked={false}
               onChange={(e) =>
                 setSettings({
-                  betaUpdate: e.currentTarget.checked,
+                  betaUpdate: false,
                 })
               }
             />

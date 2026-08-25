@@ -357,6 +357,31 @@ function isOpenAICompatibleApiStyle(provider: ModelProvider | undefined, model: 
   return isCustomProviderId(provider) && (!model.apiStyle || model.apiStyle === 'openai')
 }
 
+/**
+ * Reasoning-control "kind" for a model that opted in via the `reasoning`
+ * capability flag (typically a custom provider whose id matches no built-in
+ * heuristic). The kind selects the wire format + UI levels; it is derived from
+ * the model's effective provider (resolved from its API style) so the emitted
+ * parameters match the upstream API family. DeepSeek keeps its low/high/max
+ * effort shaping; everything OpenAI-style shares reasoning_effort.
+ */
+function deriveReasoningKind(
+  effectiveProvider: ModelProvider | undefined,
+  modelId: string
+): ReasoningControlCapabilities['kind'] {
+  if (effectiveProvider === ModelProviderEnum.DeepSeek) {
+    return isDeepSeekReasoningEffortModel(modelId) ? 'deepseek-effort' : 'toggle'
+  }
+  if (effectiveProvider === ModelProviderEnum.OpenRouter) return 'openrouter-reasoning'
+  if (effectiveProvider === ModelProviderEnum.XAI) return 'xai-effort'
+  if (effectiveProvider === ModelProviderEnum.Qwen || effectiveProvider === ModelProviderEnum.QwenPortal) {
+    return 'budget'
+  }
+  if (effectiveProvider === ModelProviderEnum.Gemini) return 'budget'
+  if (effectiveProvider === ModelProviderEnum.Claude) return 'anthropic-effort'
+  return 'openai-effort'
+}
+
 export function getReasoningControlCapabilities(
   provider: ModelProvider | undefined,
   model?: ProviderModelInfo | null
@@ -371,6 +396,18 @@ export function getReasoningControlCapabilities(
   const disabledReason = getApiStyleDisabledReason(provider, effectiveProvider, model)
   if (disabledReason) {
     return { supported: false, kind: 'toggle', disabledReason }
+  }
+
+  // A custom-provider model that explicitly declares the reasoning capability gets
+  // thinking controls regardless of whether its id matches a built-in heuristic.
+  // Custom providers wrap opaque upstream model ids, so the capability flag (the
+  // ModelEdit "Reasoning" toggle) is the best signal we have; the wire format is
+  // derived from the model's effective provider (its API style). Built-in providers
+  // keep their precise id-based shaping below and never trust the flag — models.dev
+  // capability data is unreliable, so a builtin id that matches no reasoning
+  // heuristic stays control-free.
+  if (isCustomProviderId(provider) && model?.capabilities?.includes('reasoning')) {
+    return { supported: true, kind: deriveReasoningKind(effectiveProvider, modelId) }
   }
 
   // ChatboxAI's server-selected API style may change independently of the client.

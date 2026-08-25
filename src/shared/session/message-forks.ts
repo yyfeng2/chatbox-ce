@@ -85,43 +85,86 @@ function searchMessageContext(
   session: Session,
   messageId: string
 ): { location: MessageLocation; thread: SessionThread | null } | null {
-  const search = (messages: Message[], expandedForkIds: Set<string>): MessageLocation | null => {
-    const index = messages.findIndex((message) => message.id === messageId)
-    if (index >= 0) {
-      return { list: messages, index }
-    }
-
-    for (let pivotIndex = 0; pivotIndex < messages.length; pivotIndex += 1) {
-      const pivotId = messages[pivotIndex].id
-      const fork = session.messageForksHash?.[pivotId]
-      if (!fork || expandedForkIds.has(pivotId)) {
-        continue
-      }
-
-      const nextExpandedForkIds = new Set(expandedForkIds).add(pivotId)
-      for (const branch of fork.lists) {
-        if (branch.messages.length === 0) {
-          continue
-        }
-        const branchContext = [...messages.slice(0, forkTailStartIndex(messages, pivotIndex)), ...branch.messages]
-        const found = search(branchContext, nextExpandedForkIds)
-        if (found) {
-          return found
-        }
-      }
-    }
-
-    return null
-  }
-
-  const rootResult = search(session.messages, new Set())
-  if (rootResult) {
-    return { location: rootResult, thread: null }
+  const rootIndex = session.messages.findIndex((message) => message.id === messageId)
+  if (rootIndex >= 0) {
+    return { location: { list: session.messages, index: rootIndex }, thread: null }
   }
   for (const thread of session.threads ?? []) {
-    const threadResult = search(thread.messages, new Set())
-    if (threadResult) {
-      return { location: threadResult, thread }
+    const threadIndex = thread.messages.findIndex((message) => message.id === messageId)
+    if (threadIndex >= 0) {
+      return { location: { list: thread.messages, index: threadIndex }, thread }
+    }
+  }
+
+  // The message lives (if anywhere) in a saved fork branch. Rebuild that
+  // branch's path by walking the pivot chain up to its root/thread instead of
+  // enumerating branch combinations top-down: message ids are unique, so each
+  // pivot is stored in exactly one place, and the walk stays linear where the
+  // top-down expansion re-explored shared prefixes exponentially once a
+  // conversation accumulated many fork points (each Reply Again adds one).
+  for (const [pivotId, fork] of Object.entries(session.messageForksHash ?? {})) {
+    for (const branch of fork.lists) {
+      const branchIndex = branch.messages.findIndex((message) => message.id === messageId)
+      if (branchIndex < 0) {
+        continue
+      }
+      // An unreachable pivot means orphaned fork data; the branch is not part
+      // of any conversation path, matching the previous behavior of never
+      // expanding it.
+      const prefix = buildBranchPathPrefix(session, pivotId, new Set([pivotId]))
+      if (!prefix) {
+        continue
+      }
+      return {
+        location: { list: [...prefix.messages, ...branch.messages], index: prefix.messages.length + branchIndex },
+        thread: prefix.thread,
+      }
+    }
+  }
+  return null
+}
+
+/**
+ * Conversation-path prefix leading into the fork at `pivotId`: every message
+ * up to the pivot plus its anchored summaries, resolved recursively when the
+ * pivot pivot itself lives inside another saved branch. Returns null when the pivot
+ * is not reachable from the root or any thread (orphaned fork data).
+ */
+function buildBranchPathPrefix(
+  session: Session,
+  pivotId: string,
+  visitedPivotIds: Set<string>
+): { messages: Message[]; thread: SessionThread | null } | null {
+  const rootIndex = session.messages.findIndex((message) => message.id === pivotId)
+  if (rootIndex >= 0) {
+    return { messages: session.messages.slice(0, forkTailStartIndex(session.messages, rootIndex)), thread: null }
+  }
+  for (const thread of session.threads ?? []) {
+    const threadIndex = thread.messages.findIndex((message) => message.id === pivotId)
+    if (threadIndex >= 0) {
+      return { messages: thread.messages.slice(0, forkTailStartIndex(thread.messages, threadIndex)), thread }
+    }
+  }
+  for (const [outerPivotId, fork] of Object.entries(session.messageForksHash ?? {})) {
+    if (visitedPivotIds.has(outerPivotId)) {
+      continue
+    }
+    for (const branch of fork.lists) {
+      const branchIndex = branch.messages.findIndex((message) => message.id === pivotId)
+      if (branchIndex < 0) {
+        continue
+      }
+      const outerPrefix = buildBranchPathPrefix(session, outerPivotId, new Set(visitedPivotIds).add(outerPivotId))
+      if (!outerPrefix) {
+        continue
+      }
+      return {
+        messages: [
+          ...outerPrefix.messages,
+          ...branch.messages.slice(0, forkTailStartIndex(branch.messages, branchIndex)),
+        ],
+        thread: outerPrefix.thread,
+      }
     }
   }
   return null

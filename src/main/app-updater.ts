@@ -23,8 +23,9 @@ export class AppUpdater {
 
     log.transports.file.level = 'info'
     autoUpdater.logger = log
-    autoUpdater.autoDownload = true
-    autoUpdater.autoInstallOnAppQuit = true
+    // CE 定制版:禁用自动下载与退出后自动安装,即使触发检查也不会自动更新。
+    autoUpdater.autoDownload = false
+    autoUpdater.autoInstallOnAppQuit = false
 
     autoUpdater.on('checking-for-update', () => {
       sendToRenderer(this.getWindow(), 'updater:checking')
@@ -81,15 +82,9 @@ export class AppUpdater {
       autoUpdater.quitAndInstall(...getQuitAndInstallArguments(process.platform))
     })
 
-    const settings = getSettings()
-    if (settings.autoUpdate) {
-      setTimeout(() => this.tryUpdate().catch((e) => log.error('auto_updater: startup check failed', e)), 5_000)
-      setInterval(
-        () => this.tryUpdate().catch((e) => log.error('auto_updater: scheduled check failed', e)),
-        1000 * 60 * 60
-      )
-      log.info('Update timer started, checking every hour')
-    }
+    // CE 定制版:禁用自动更新检查。不再启动开机/每小时定时检查,即使打开设置页的
+    // 「自动更新」开关也不会触发;需要时仍可通过手动入口检查(指向已下线的旧服务)。
+    log.info('Auto update check disabled (Chatbox CE)')
   }
 
   async tryUpdate() {

@@ -12,6 +12,7 @@ import type {
   Settings,
 } from '@shared/types'
 import type { DocumentParserConfig } from '@shared/types/settings'
+import { findMessageContext } from '@shared/session/message-forks'
 import { getMessageText, migrateMessage } from '@shared/utils/message'
 import { pick } from 'lodash'
 import i18n from '@/i18n'
@@ -764,7 +765,12 @@ export function constructUserMessage(
   return msg
 }
 
-export async function exportChat(session: Session, scope: ExportChatScope, format: ExportChatFormat) {
+export async function exportChat(
+  session: Session,
+  scope: ExportChatScope,
+  format: ExportChatFormat,
+  includeBranches = false
+) {
   const threads: SessionThread[] = scope === 'all_threads' ? [...(session.threads || [])] : []
   threads.push({
     id: session.id,
@@ -772,6 +778,12 @@ export async function exportChat(session: Session, scope: ExportChatScope, forma
     messages: session.messages,
     createdAt: Date.now(),
   })
+
+  // Inactive fork branches store only their tail after the pivot; reconstruct
+  // each one's full path so it reads as a standalone conversation in the export.
+  if (includeBranches) {
+    threads.push(...collectForkBranchThreads(session))
+  }
 
   if (format === 'Markdown') {
     const content = formatChatAsMarkdown(session.name, threads)
@@ -783,6 +795,36 @@ export async function exportChat(session: Session, scope: ExportChatScope, forma
     const content = await formatChatAsHtml(session.name, threads)
     platform.exporter.exportTextFile(`${session.name}.html`, content)
   }
+}
+
+/**
+ * Collect every saved fork branch as a standalone export thread. The active
+ * branch's tail already lives in `session.messages` (exported separately);
+ * only the inactive branches are stored in the fork lists, and each needs its
+ * shared prefix reconstructed to be meaningful on its own.
+ */
+function collectForkBranchThreads(session: Session): SessionThread[] {
+  const threads: SessionThread[] = []
+  const forks = session.messageForksHash
+  if (!forks) return threads
+
+  let index = 0
+  for (const fork of Object.values(forks)) {
+    for (const branch of fork.lists) {
+      if (!branch.messages || branch.messages.length === 0) continue
+      index += 1
+      const lastMessage = branch.messages[branch.messages.length - 1]
+      const context = findMessageContext(session, lastMessage.id)
+      if (!context) continue
+      threads.push({
+        id: `branch-${index}`,
+        name: `分支 ${index}`,
+        messages: context.list.slice(0, context.index + 1),
+        createdAt: fork.createdAt ?? Date.now(),
+      })
+    }
+  }
+  return threads
 }
 
 export function mergeSettings(

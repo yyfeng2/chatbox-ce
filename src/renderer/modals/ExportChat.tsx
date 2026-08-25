@@ -1,5 +1,5 @@
 import NiceModal, { useModal } from '@ebay/nice-modal-react'
-import { Button, Stack, Text } from '@mantine/core'
+import { Button, Checkbox, Stack, Text } from '@mantine/core'
 import type { ExportChatFormat, ExportChatScope } from '@shared/types'
 import { useAtomValue } from 'jotai'
 import { useState } from 'react'
@@ -14,6 +14,7 @@ const ExportChat = NiceModal.create(() => {
   const { t } = useTranslation()
   const [scope, setScope] = useState<ExportChatScope>('all_threads')
   const [format, setFormat] = useState<ExportChatFormat>('HTML')
+  const [includeBranches, setIncludeBranches] = useState(false)
 
   const currentSessionId = useAtomValue(currentSessionIdAtom)
   const onCancel = () => {
@@ -24,7 +25,7 @@ const ExportChat = NiceModal.create(() => {
     if (!currentSessionId) {
       return
     }
-    void exportSessionChat(currentSessionId, scope, format)
+    void exportSessionChat(currentSessionId, scope, format, includeBranches)
     modal.resolve()
     modal.hide()
   }
@@ -62,6 +63,13 @@ const ExportChat = NiceModal.create(() => {
           data={['Markdown', 'TXT', 'HTML']}
           value={format}
           onChange={(e) => e && setFormat(e as ExportChatFormat)}
+        />
+
+        <Checkbox
+          checked={includeBranches}
+          onChange={(e) => setIncludeBranches(e.currentTarget.checked)}
+          label={t('Include all reply branches')}
+          description={t('Export every alternative reply path as separate sections you can switch between in the file.')}
         />
       </Stack>
 

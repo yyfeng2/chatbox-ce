@@ -30,6 +30,8 @@ describe('automation test ID contract', () => {
   it('uses dynamic IDs only for finite reasoning levels', () => {
     expect(TestId.reasoning.level('low')).toBe('reasoning-level-low')
     expect(TestId.reasoning.level('high')).toBe('reasoning-level-high')
+    expect(TestId.reasoning.level('xhigh')).toBe('reasoning-level-xhigh')
+    expect(TestId.reasoning.level('max')).toBe('reasoning-level-max')
   })
 
   it('keeps mobile action-bar and action-menu IDs disjoint', () => {

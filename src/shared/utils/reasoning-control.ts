@@ -10,7 +10,7 @@ import {
 
 // 'default' sends no reasoning-related parameters at all (the provider's server-side
 // default applies); 'off' force-sends the provider's explicit disable parameters.
-export type ReasoningControlLevel = 'default' | 'off' | 'low' | 'medium' | 'high'
+export type ReasoningControlLevel = 'default' | 'off' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 
 /**
  * Session-level storage for reasoning provider options. `providerOptionsByModel`
@@ -93,7 +93,7 @@ export interface ReasoningControlCapabilities {
 
 export interface ReasoningControlOption {
   level: ReasoningControlLevel
-  label: 'default' | 'off' | 'on' | 'low' | 'medium' | 'high'
+  label: 'default' | 'off' | 'on' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 }
 
 const DEFAULT_CAPABILITIES: ReasoningControlCapabilities = {
@@ -102,18 +102,24 @@ const DEFAULT_CAPABILITIES: ReasoningControlCapabilities = {
 }
 
 type ReasoningEffortLevel = Exclude<ReasoningControlLevel, 'default' | 'off'>
-type DeepSeekReasoningEffort = 'low' | 'high' | 'max'
+type DeepSeekReasoningEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 
 const CLAUDE_BUDGET_BY_LEVEL: Record<ReasoningEffortLevel, number> = {
   low: 1024,
   medium: 4096,
   high: 8192,
+  // Budget-style families never offer xhigh/max gears; these keys exist only to
+  // keep the Record total.
+  xhigh: 8192,
+  max: 8192,
 }
 
 const GEMINI_BUDGET_BY_LEVEL: Record<ReasoningEffortLevel, number> = {
   low: 1024,
   medium: 8192,
   high: 24576,
+  xhigh: 24576,
+  max: 24576,
 }
 
 // Readback boundaries accept both the level budgets above (1024/8192/24576) and the
@@ -122,21 +128,28 @@ const GEMINI_BUDGET_BY_LEVEL: Record<ReasoningEffortLevel, number> = {
 const GEMINI_LEVEL_READBACK_MIN: Record<Exclude<ReasoningEffortLevel, 'low'>, number> = {
   medium: 4096,
   high: 10240,
+  xhigh: 10240,
+  max: 10240,
 }
 
-// DeepSeek's official APIs expose low/high/max rather than the UI's
-// low/medium/high. Preserve three distinct controls by mapping the middle UI
-// level to DeepSeek high and the highest UI level to DeepSeek max.
+// DeepSeek V4 exposes the full effort scale (low/medium/high/xhigh/max), so each
+// UI level maps 1:1 to the wire value. Only V4 models reach this table (the
+// deepseek-effort kind is gated on isDeepSeekReasoningEffortModel); older
+// DeepSeek reasoning models keep simple on/off toggle controls instead.
 const DEEPSEEK_EFFORT_BY_LEVEL: Record<ReasoningEffortLevel, DeepSeekReasoningEffort> = {
   low: 'low',
-  medium: 'high',
-  high: 'max',
+  medium: 'medium',
+  high: 'high',
+  xhigh: 'xhigh',
+  max: 'max',
 }
 
 const QWEN_THINKING_BUDGET_BY_LEVEL: Record<ReasoningEffortLevel, number> = {
   low: 1024,
   medium: 4096,
   high: 8192,
+  xhigh: 8192,
+  max: 8192,
 }
 
 const GPT_EFFORT_MODELS = [/(?:^|\/)gpt-5(?:[.-]|$)/i, /(?:^|\/)gpt-oss(?:[.-]|$)/i, /(?:^|\/)o[1-9](?:[.-]|$)/i]
@@ -234,9 +247,9 @@ export function normalizeClaudeReasoningOptions(
   if (!claude) return undefined
   if (usesClaudeEffortControl(modelId)) {
     if (!claude.effort) return undefined
-    // 'xhigh'/'max' are DeepSeek-Anthropic-only values; clamp to the strongest
-    // level Claude effort models accept.
-    return { effort: claude.effort === 'xhigh' || claude.effort === 'max' ? 'high' : claude.effort }
+    // Claude effort models accept the full scale (low/medium/high/xhigh/max), so the
+    // effort is passed through unchanged.
+    return { effort: claude.effort }
   }
   // Budget-style models reject enabled thinking without budget_tokens (a shape only
   // the DeepSeek-Anthropic writer produces); treat it as 'default' instead.
@@ -250,10 +263,11 @@ export function normalizeClaudeReasoningOptions(
  * reject the minimal/none off values.
  */
 export function isOpenAIReasoningEffortSupported(modelId: string, effort: string): boolean {
-  // 'max' is a DeepSeek-only effort; OpenAI models reject it. The DeepSeek
-  // Responses path branches off before this check, so it is never affected.
-  if (effort === 'max') return false
+  // o1-preview/o1-mini predate the reasoning_effort parameter — the API rejects it
+  // for them entirely, so they must not get effort controls at all.
   if (matchesAny(modelId, OPENAI_NO_EFFORT_PARAM_MODELS)) return false
+  // o-series models only accept low/medium/high/xhigh/max — there is no
+  // minimal/none, so reasoning cannot be turned off for them.
   if (matchesAny(modelId, OPENAI_NO_DISABLE_MODELS) && (effort === 'minimal' || effort === 'none')) return false
   return true
 }
@@ -369,7 +383,10 @@ function deriveReasoningKind(
   effectiveProvider: ModelProvider | undefined,
   modelId: string
 ): ReasoningControlCapabilities['kind'] {
-  if (effectiveProvider === ModelProviderEnum.DeepSeek) {
+  // DeepSeek reasoning models are detected by id (not only via the native DeepSeek
+  // provider) so a V4 served through an OpenAI/Claude-style custom endpoint keeps the
+  // DeepSeek kind — and therefore its distinctive max gear.
+  if (isDeepSeekReasoningModel(modelId)) {
     return isDeepSeekReasoningEffortModel(modelId) ? 'deepseek-effort' : 'toggle'
   }
   if (effectiveProvider === ModelProviderEnum.OpenRouter) return 'openrouter-reasoning'
@@ -379,6 +396,8 @@ function deriveReasoningKind(
   }
   if (effectiveProvider === ModelProviderEnum.Gemini) return 'budget'
   if (effectiveProvider === ModelProviderEnum.Claude) return 'anthropic-effort'
+  // OpenAI / OpenAIResponses / Azure and any unknown custom effective provider
+  // share the reasoning_effort wire format.
   return 'openai-effort'
 }
 
@@ -627,13 +646,29 @@ export function getReasoningControlOptions(
     return [{ level: 'default', label: 'default' }, ...offOption, { level: 'high', label: 'on' }]
   }
 
-  return [
+  // Base strength gears shared by every effort/budget/level family.
+  const gears: ReasoningControlOption[] = [
     { level: 'default', label: 'default' },
     ...offOption,
     { level: 'low', label: 'low' },
     { level: 'medium', label: 'medium' },
     { level: 'high', label: 'high' },
   ]
+
+  // xhigh and max are the two tiers above high. They belong to every
+  // effort-controlled family (OpenAI, Claude and DeepSeek all expose the full
+  // reasoning_effort scale low/medium/high/xhigh/max); budget/level families
+  // (Gemini, Qwen) and simple toggles top out at high.
+  if (
+    capabilities.kind === 'openai-effort' ||
+    capabilities.kind === 'anthropic-effort' ||
+    capabilities.kind === 'anthropic-adaptive-effort' ||
+    capabilities.kind === 'deepseek-effort'
+  ) {
+    gears.push({ level: 'xhigh', label: 'xhigh' }, { level: 'max', label: 'max' })
+  }
+
+  return gears
 }
 
 export function getReasoningProviderOptions(
@@ -740,9 +775,12 @@ export function getReasoningProviderOptions(
       forceReasoning: true,
     }
   } else if (effectiveProvider === ModelProviderEnum.OpenRouter) {
+    // OpenRouter maps reasoning.effort per model and only exposes low/medium/high
+    // (xhigh/max are not part of its effort enum), so the level is always one of
+    // those three here.
     next.openrouter = {
       reasoning: {
-        effort: level,
+        effort: level as 'low' | 'medium' | 'high',
         exclude: false,
       },
     }
@@ -801,8 +839,10 @@ function deriveDeepSeekResponsesLevel(modelId: string, effort: string | undefine
 
 function normalizeDeepSeekEffortToLevel(effort: string | undefined): ReasoningControlLevel {
   if (effort === 'low') return 'low'
-  if (effort === 'high') return 'medium'
-  if (effort === 'max' || effort === 'xhigh') return 'high'
+  if (effort === 'medium') return 'medium'
+  if (effort === 'high') return 'high'
+  if (effort === 'xhigh') return 'xhigh'
+  if (effort === 'max') return 'max'
   return 'default'
 }
 
@@ -847,7 +887,9 @@ export function getOpenAIReasoningEffort(
 function normalizeEffortToLevel(effort: string | undefined): ReasoningControlLevel {
   if (!effort) return 'default'
   if (effort === 'none' || effort === 'minimal') return 'off'
-  if (effort === 'low' || effort === 'medium' || effort === 'high') return effort
+  if (effort === 'low' || effort === 'medium' || effort === 'high' || effort === 'xhigh' || effort === 'max') {
+    return effort
+  }
   return 'high'
 }
 

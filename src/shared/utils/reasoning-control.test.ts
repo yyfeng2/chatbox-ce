@@ -97,7 +97,8 @@ describe('reasoning-control', () => {
     const qwen = getReasoningProviderOptions(ModelProviderEnum.Qwen, model('qwen3.7-max'), 'high')
 
     expect(deepseek?.deepseek).toEqual({ thinking: { type: 'enabled' } })
-    expect(deepseekV4?.deepseek).toEqual({ thinking: { type: 'enabled' }, reasoningEffort: 'high' })
+    // DeepSeek V4 uses the full effort scale, so the UI level maps 1:1 to the wire.
+    expect(deepseekV4?.deepseek).toEqual({ thinking: { type: 'enabled' }, reasoningEffort: 'medium' })
     expect(deepseekV32?.deepseek).toEqual({ thinking: { type: 'enabled' } })
     expect(getReasoningControlLevel(ModelProviderEnum.DeepSeek, model('deepseek-v3.2-thinking'), deepseekV32)).toBe(
       'high'
@@ -117,6 +118,8 @@ describe('reasoning-control', () => {
       { level: 'low', label: 'low' },
       { level: 'medium', label: 'medium' },
       { level: 'high', label: 'high' },
+      { level: 'xhigh', label: 'xhigh' },
+      { level: 'max', label: 'max' },
     ])
   })
 
@@ -129,24 +132,31 @@ describe('reasoning-control', () => {
       { level: 'high', label: 'high' },
     ])
     // Claude effort/adaptive models are controlled via the effort param only; an explicit
-    // thinking disable never reaches the wire, so no off option is offered.
+    // thinking disable never reaches the wire, so no off option is offered. They expose the
+    // full effort scale (low/medium/high/xhigh/max).
     expect(getReasoningControlOptions(ModelProviderEnum.Claude, model('claude-opus-4-5'))).toEqual([
       { level: 'default', label: 'default' },
       { level: 'low', label: 'low' },
       { level: 'medium', label: 'medium' },
       { level: 'high', label: 'high' },
+      { level: 'xhigh', label: 'xhigh' },
+      { level: 'max', label: 'max' },
     ])
     expect(getReasoningControlOptions(ModelProviderEnum.Claude, model('claude-opus-4-8'))).toEqual([
       { level: 'default', label: 'default' },
       { level: 'low', label: 'low' },
       { level: 'medium', label: 'medium' },
       { level: 'high', label: 'high' },
+      { level: 'xhigh', label: 'xhigh' },
+      { level: 'max', label: 'max' },
     ])
     expect(getReasoningControlOptions(ModelProviderEnum.Claude, model('claude-opus-5'))).toEqual([
       { level: 'default', label: 'default' },
       { level: 'low', label: 'low' },
       { level: 'medium', label: 'medium' },
       { level: 'high', label: 'high' },
+      { level: 'xhigh', label: 'xhigh' },
+      { level: 'max', label: 'max' },
     ])
     // Budget-style Claude and Gemini Flash keep their explicit off.
     expect(getReasoningControlOptions(ModelProviderEnum.Claude, model('claude-sonnet-4-6'))[1]).toEqual({
@@ -243,12 +253,14 @@ describe('reasoning-control', () => {
       kind: 'toggle',
     })
     expect(getReasoningControlCapabilities(ModelProviderEnum.OpenAI, model('o1-mini')).supported).toBe(false)
-    // o-series only accepts low/medium/high — no minimal/none, so no off option.
+    // o-series only accepts low/medium/high/xhigh/max — no minimal/none, so no off option.
     expect(getReasoningControlOptions(ModelProviderEnum.OpenAI, model('o3')).map((o) => o.level)).toEqual([
       'default',
       'low',
       'medium',
       'high',
+      'xhigh',
+      'max',
     ])
     // ChatboxAI / custom providers route o-series by API style.
     expect(getReasoningControlCapabilities('chatbox-ai', model('o3', 'openai')).kind).toBe(
@@ -434,6 +446,8 @@ describe('reasoning-control', () => {
       { level: 'low', label: 'low' },
       { level: 'medium', label: 'medium' },
       { level: 'high', label: 'high' },
+      { level: 'xhigh', label: 'xhigh' },
+      { level: 'max', label: 'max' },
     ])
     expect(options?.deepseek).toEqual({ thinking: { type: 'enabled' } })
   })
@@ -446,9 +460,10 @@ describe('reasoning-control', () => {
         deepseek: { thinking: { type: 'enabled' } },
       })
     ).toBe('default')
+    // A malformed effort value (not in the V4 scale) must read back as default.
     expect(
       getReasoningControlLevel('chatbox-ai', v4, {
-        deepseek: { thinking: { type: 'enabled' }, reasoningEffort: 'medium' },
+        deepseek: { thinking: { type: 'enabled' }, reasoningEffort: 'bogus' as unknown as 'low' },
       })
     ).toBe('default')
   })
@@ -820,16 +835,17 @@ describe('reasoning-control', () => {
       ).toEqual({ thinking: { type: 'enabled', budgetTokens: 1024 } })
     })
 
-    it('clamps DeepSeek-only Claude effort values on effort-style models', () => {
-      expect(normalizeClaudeReasoningOptions('claude-opus-4-5', { effort: 'max' })).toEqual({ effort: 'high' })
-      expect(normalizeClaudeReasoningOptions('claude-opus-4-8', { effort: 'xhigh' })).toEqual({ effort: 'high' })
+    it('passes the full effort scale through on Claude effort-style models', () => {
+      expect(normalizeClaudeReasoningOptions('claude-opus-4-5', { effort: 'low' })).toEqual({ effort: 'low' })
+      expect(normalizeClaudeReasoningOptions('claude-opus-4-5', { effort: 'xhigh' })).toEqual({ effort: 'xhigh' })
+      expect(normalizeClaudeReasoningOptions('claude-opus-4-8', { effort: 'max' })).toEqual({ effort: 'max' })
     })
 
-    it('rejects the DeepSeek-only max effort for OpenAI models', () => {
-      expect(isOpenAIReasoningEffortSupported('gpt-5.5', 'max')).toBe(false)
+    it('accepts the universal max effort for OpenAI models', () => {
+      expect(isOpenAIReasoningEffortSupported('gpt-5.5', 'max')).toBe(true)
       expect(
         normalizeOpenAIReasoningOptions('gpt-5.5', { reasoningEffort: 'max', forceReasoning: true })
-      ).toBeUndefined()
+      ).toEqual({ reasoningEffort: 'max', forceReasoning: true })
     })
   })
 })

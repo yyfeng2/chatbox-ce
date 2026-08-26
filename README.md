@@ -78,6 +78,9 @@ This is a fork of the [Chatbox Community Edition](https://github.com/chatboxai/c
 
 ### ✨ More Features
 -   :sparkles: Constantly enhancing the experience with new features!
+-   **Fine-Grained Reasoning Control** :brain: Adjust reasoning effort for capable models across the full scale (`low` / `medium` / `high` / `xhigh` / `max`); custom providers expose it once you enable the model's *Reasoning* capability.
+-   **Branch-Aware HTML Export** :books: Export a conversation to HTML with an optional view of every alternative reply branch, switchable directly in the exported file.
+-   **Large-Conversation Performance** :rocket: Windowed minimap and linear fork-branch lookups keep long, multi-branch chats responsive while regenerating or switching replies.
 
 ## Build from Source
 

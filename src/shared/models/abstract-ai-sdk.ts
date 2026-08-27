@@ -230,8 +230,10 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
   // session after switching from a reasoning-capable model, so we strip them at the
   // request edge using the same provider + hard-coded model-id logic as the UI control
   // (the generic `reasoning` capability flag is unreliable — some reasoning models, e.g.
-  // qwen3.x, ship without it in their registry metadata). When the provider is unknown we
-  // leave options untouched to avoid stripping anything we cannot positively classify.
+  // qwen3.x, ship without it in their registry metadata). Custom-provider chat models
+  // always report reasoning support, so their options are never stripped here. When the
+  // provider is unknown we leave options untouched to avoid stripping anything we cannot
+  // positively classify.
   private resolveCallSettings(options: CallChatCompletionOptions): CallSettings {
     const providerId = this.options.model.providerId
     const shouldStrip =

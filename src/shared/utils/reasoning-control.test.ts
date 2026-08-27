@@ -47,11 +47,15 @@ describe('reasoning-control', () => {
     const openaiCapabilities = getReasoningControlCapabilities(ModelProviderEnum.OpenAI, model('gpt-5-chat-latest'))
     expect(openaiCapabilities.supported).toBe(false)
     expect(openaiCapabilities.disabledReason).toBeUndefined()
+    // Custom providers (arbitrary ids like 'chatbox-ai'/'my-openai-proxy') are exempt from
+    // the non-reasoning chat-model carve-outs: any chat model there offers reasoning
+    // controls, so the OpenAI-compatible reasoning_effort scale can still be applied
+    // (vLLM-style endpoints accept it unconditionally).
     expect(getReasoningControlCapabilities('chatbox-ai', model('gpt-5-chat', 'openai')).supported).toBe(
-      false
+      true
     )
     expect(getReasoningControlCapabilities('my-openai-proxy', model('openai/gpt-5-chat', 'openai')).supported).toBe(
-      false
+      true
     )
     // Versioned chat variants ship in the registry too (gpt-5.1-chat, gpt-5.2-chat-latest).
     expect(getReasoningControlCapabilities(ModelProviderEnum.OpenAI, model('gpt-5.1-chat-latest')).supported).toBe(
@@ -60,7 +64,7 @@ describe('reasoning-control', () => {
     expect(getReasoningControlCapabilities(ModelProviderEnum.OpenAI, model('gpt-5.2-chat')).supported).toBe(false)
     expect(
       getReasoningControlCapabilities('chatbox-ai', model('gpt-5.2-chat', 'openai')).supported
-    ).toBe(false)
+    ).toBe(true)
     expect(getReasoningControlCapabilities(ModelProviderEnum.OpenRouter, model('openai/gpt-5.1-chat')).supported).toBe(
       false
     )
@@ -199,9 +203,17 @@ describe('reasoning-control', () => {
         deepseek: { thinking: { type: 'disabled' } },
       })
     ).toBe('off')
+    // Custom (arbitrary id, e.g. 'chatbox-ai') DeepSeek models read/write the off state
+    // via openai.reasoningEffort; a legacy openaiCompatible.reasoning toggle is no longer
+    // interpreted for them.
     expect(
       getReasoningControlLevel('chatbox-ai', model('deepseek-v4-pro', 'openai'), {
         openaiCompatible: { reasoning: { enabled: false } },
+      })
+    ).toBe('default')
+    expect(
+      getReasoningControlLevel('chatbox-ai', model('deepseek-v4-pro', 'openai'), {
+        openai: { reasoningEffort: 'none' },
       })
     ).toBe('off')
     expect(getReasoningControlLevel(ModelProviderEnum.XAI, model('grok-4.3'), undefined)).toBe('default')
@@ -267,7 +279,10 @@ describe('reasoning-control', () => {
       'openai-effort'
     )
     expect(getReasoningControlCapabilities('my-openai-proxy', model('o3', 'openai-responses')).supported).toBe(true)
-    expect(getReasoningControlCapabilities('acme-llm', model('o3', 'anthropic')).supported).toBe(false)
+    // Custom providers (arbitrary id) offer controls regardless of api-style mismatch:
+    // O3 behind an anthropic-style custom endpoint routes to the anthropic effort wire.
+    expect(getReasoningControlCapabilities('acme-llm', model('o3', 'anthropic')).supported).toBe(true)
+    expect(getReasoningControlCapabilities('acme-llm', model('o3', 'anthropic')).kind).toBe('anthropic-effort')
     // Requesting off falls back to stripping; levels map to plain reasoning effort.
     expect(
       getReasoningProviderOptions(ModelProviderEnum.OpenAI, model('o3'), 'off', {
@@ -420,11 +435,9 @@ describe('reasoning-control', () => {
         openrouter: { reasoning: { enabled: false, exclude: true } },
       }
     )
-    expect(getReasoningProviderOptions('chatbox-ai', model('deepseek-v4-pro', 'openai'), 'off')).toEqual(
-      {
-        deepseek: { thinking: { type: 'disabled' } },
-      }
-    )
+    expect(getReasoningProviderOptions('chatbox-ai', model('deepseek-v4-pro', 'openai'), 'off')).toEqual({
+      openai: { reasoningEffort: 'minimal', forceReasoning: true },
+    })
   })
 
   it('keeps native DeepSeek provider enabled even when UI fallback adds openai apiStyle', () => {
@@ -477,15 +490,41 @@ describe('reasoning-control', () => {
     expect(getReasoningControlCapabilities(ModelProviderEnum.DeepSeek, modelInfo).supported).toBe(false)
   })
 
-  it('lets a custom-provider model opt in to thinking controls via the reasoning capability flag', () => {
-    // Custom providers wrap opaque upstream endpoints, so the user's explicit
-    // reasoning-capability flag (ModelEdit toggle) is what enables the control.
+  it('offers thinking controls to every chat/task model on custom providers regardless of the reasoning capability flag', () => {
+    // Custom providers wrap opaque upstream endpoints whose models cannot be
+    // classified by id. Any chat model is treated as reasoning-capable (OpenAI-
+    // compatible endpoints accept the reasoning_effort scale), so no flag is needed.
     const openaiModel: ProviderModelInfo = { modelId: 'my-reasoning-model', apiStyle: 'openai', capabilities: ['reasoning'] }
     expect(getReasoningControlCapabilities('my-custom-provider', openaiModel).supported).toBe(true)
     expect(getReasoningControlCapabilities('my-custom-provider', openaiModel).kind).toBe('openai-effort')
 
+    // The flag is no longer required for the control to appear, and DeepSeek models on
+    // custom OpenAI-compatible endpoints use the reasoning_effort wire (deepseek-effort
+    // would write the deepseek namespace, which custom model classes never read).
+    const unflaggedModel: ProviderModelInfo = { modelId: 'deepseek-r1-0702', apiStyle: 'openai' }
+    expect(getReasoningControlCapabilities('my-custom-provider', unflaggedModel).supported).toBe(true)
+    expect(getReasoningControlCapabilities('my-custom-provider', unflaggedModel).kind).toBe('openai-effort')
+
+    const customEnumModel: ProviderModelInfo = { modelId: 'some-chat-model', apiStyle: 'openai' }
+    expect(
+      getReasoningControlCapabilities(ModelProviderEnum.Custom, customEnumModel).supported
+    ).toBe(true)
+
     const claudeModel: ProviderModelInfo = { modelId: 'my-claude-model', apiStyle: 'anthropic', capabilities: ['reasoning'] }
     expect(getReasoningControlCapabilities('my-custom-provider', claudeModel).kind).toBe('anthropic-effort')
+
+    // A DeepSeek model behind a custom OpenAI-compatible endpoint must always write the
+    // reasoning_effort wire (never the deepseek namespace its custom class won't read),
+    // and the off state must use reasoning_effort none/minimal — this was the user-facing
+    // "adjust has no effect" bug.
+    const deepseekModel: ProviderModelInfo = { modelId: 'deepseek-r1-0702', apiStyle: 'openai' }
+    const dsHigh = getReasoningProviderOptions('my-custom-provider', deepseekModel, 'high')
+    expect(dsHigh?.openai?.reasoningEffort).toBe('high')
+    expect(dsHigh?.deepseek).toBeUndefined()
+    const dsOff = getReasoningProviderOptions('my-custom-provider', deepseekModel, 'off')
+    expect(dsOff?.openai?.reasoningEffort).toBe('minimal')
+    expect(dsOff?.deepseek).toBeUndefined()
+    expect(getReasoningControlLevel('my-custom-provider', deepseekModel, dsHigh)).toBe('high')
 
     // The wire format matches the effective provider (API style) and reads back to
     // the level the user picked.
@@ -497,7 +536,15 @@ describe('reasoning-control', () => {
     expect(highClaude?.claude?.effort).toBe('high')
     expect(getReasoningControlLevel('my-custom-provider', claudeModel, highClaude)).toBe('high')
 
-    // The flag alone does not enable controls for built-in providers (unreliable).
+    // Non-chat models (image/embedding/rerank) stay control-free even on custom providers.
+    expect(
+      getReasoningControlCapabilities('my-custom-provider', { modelId: 'gpt-image-1', type: 'image', apiStyle: 'openai' }).supported
+    ).toBe(false)
+    expect(
+      getReasoningControlCapabilities('my-custom-provider', { modelId: 'embed-3', type: 'embedding', apiStyle: 'openai' }).supported
+    ).toBe(false)
+
+    // Built-in providers are untouched: the flag alone does not enable controls.
     expect(getReasoningControlCapabilities(ModelProviderEnum.OpenAI, { modelId: 'gpt-4o', capabilities: ['reasoning'] }).supported).toBe(false)
   })
 
@@ -539,24 +586,31 @@ describe('reasoning-control', () => {
     expect(gpt5Off?.openai?.forceReasoning).toBe(true)
   })
 
-  it('uses ChatboxAI apiStyle to select the backend mapping', () => {
+  it('uses the custom provider apiStyle to select the backend mapping', () => {
+    // 'chatbox-ai' is no longer a built-in provider in this fork, so any model under it
+    // is treated as a custom provider and routed by its configured API style.
     const anthropicOptions = getReasoningProviderOptions(
       'chatbox-ai',
       model('claude-sonnet-4-5', 'anthropic'),
       'low'
     )
     const googleOptions = getReasoningProviderOptions(
-      'chatbox-ai',
+      'my-openai-proxy',
       model('gemini-2.5-pro', 'google'),
       'medium'
     )
 
-    expect(anthropicOptions?.claude?.thinking?.budgetTokens).toBe(1024)
+    // Claude-style custom endpoint → anthropic effort wire.
+    expect(anthropicOptions?.claude).toEqual({ effort: 'low' })
+    // Google-style custom endpoint → thinkingBudget wire.
     expect(googleOptions?.google?.thinkingConfig?.thinkingBudget).toBe(8192)
   })
 
-  it('disables thinking controls when the model id does not match the provider API style', () => {
-    const thirdPartyAnthropic = getReasoningControlCapabilities(
+  it('no longer disables thinking controls on custom providers for api-style mismatches', () => {
+    // Custom providers (arbitrary id like 'chatbox-ai', or the literal 'custom' type) are
+    // never blocked by the api-style disabled checks: the user controls the endpoint, so a
+    // Claude/Gemini model behind any style simply routes to that style's wire format.
+    const customEnumAnthropic = getReasoningControlCapabilities(
       ModelProviderEnum.Custom,
       model('claude-sonnet-4-6', 'anthropic')
     )
@@ -572,13 +626,23 @@ describe('reasoning-control', () => {
       'chatbox-ai',
       model('deepseek-v4-pro', 'openai')
     )
+    const chatboxDeepSeekAsAnthropic = getReasoningControlCapabilities(
+      'chatbox-ai',
+      model('deepseek-v4-pro', 'anthropic')
+    )
 
-    expect(thirdPartyAnthropic.supported).toBe(true)
-    expect(chatboxClaudeAsOpenAI.supported).toBe(false)
-    expect(chatboxClaudeAsOpenAI.disabledReason).toBe('requires-anthropic-api-style')
-    expect(chatboxGeminiAsAnthropic.supported).toBe(false)
-    expect(chatboxGeminiAsAnthropic.disabledReason).toBe('requires-google-api-style')
+    expect(customEnumAnthropic.supported).toBe(true)
+    expect(customEnumAnthropic.kind).toBe('anthropic-effort')
+    expect(chatboxClaudeAsOpenAI.supported).toBe(true)
+    expect(chatboxClaudeAsOpenAI.kind).toBe('openai-effort')
+    expect(chatboxGeminiAsAnthropic.supported).toBe(true)
+    expect(chatboxGeminiAsAnthropic.kind).toBe('anthropic-effort')
     expect(chatboxDeepSeekAsOpenAI.supported).toBe(true)
+    // DeepSeek on a custom provider always uses the reasoning_effort wire (custom model
+    // classes never read the deepseek namespace), regardless of the configured API style.
+    expect(chatboxDeepSeekAsOpenAI.kind).toBe('openai-effort')
+    expect(chatboxDeepSeekAsAnthropic.supported).toBe(true)
+    expect(chatboxDeepSeekAsAnthropic.kind).toBe('openai-effort')
   })
 
   it('judges custom providers (arbitrary ids) by API style + model id', () => {
@@ -597,12 +661,19 @@ describe('reasoning-control', () => {
     expect(customOpenAIGpt5.kind).toBe('openai-effort')
     expect(customAnthropicClaude.supported).toBe(true)
     expect(customOpenAIDeepSeek.supported).toBe(true)
-    expect(customOpenAIDeepSeek.kind).toBe('toggle')
-    // A non-reasoning model on a custom provider stays unsupported (no stale params sent).
-    expect(customOpenAIPlainChat.supported).toBe(false)
-    // Claude model id behind an OpenAI-style custom endpoint is flagged, like ChatboxAI.
-    expect(customAnthropicMismatch.supported).toBe(false)
-    expect(customAnthropicMismatch.disabledReason).toBe('requires-anthropic-api-style')
+    // DeepSeek models on custom OpenAI-compatible endpoints use the reasoning_effort wire
+    // (the deepseek namespace is only consumed by the native DeepSeek provider class).
+    expect(customOpenAIDeepSeek.kind).toBe('openai-effort')
+    // Any chat model on a custom provider offers reasoning controls (OpenAI-compatible
+    // reasoning_effort is accepted even by non-reasoning models), so no id heuristic and
+    // no capability flag gate it.
+    expect(customOpenAIPlainChat.supported).toBe(true)
+    expect(customOpenAIPlainChat.kind).toBe('openai-effort')
+    // A model id matching a built-in family is not "flagged" on a custom provider: the
+    // user controls the endpoint they pointed the provider at, so the api-style mismatch
+    // checks do not apply and the wire follows the configured API style (here OpenAI).
+    expect(customAnthropicMismatch.supported).toBe(true)
+    expect(customAnthropicMismatch.kind).toBe('openai-effort')
   })
 
   it('uses OpenRouter reasoning controls for reasoning-capable OpenRouter models', () => {

@@ -27,6 +27,10 @@
 
 唯一可靠的判定是 **provider + 写死的 model id 列表 / 正则前缀**，由 `getReasoningControlCapabilities(provider, model)` 统一实现。UI 是否显示控件、请求侧是否保留参数，都必须以它为准，保证两端一致。
 
+**唯一例外：自定义（custom）供应商的 chat/task 模型不做任何 id 判定，一律开放思考控制。** 自定义供应商代理的是用户自建的端点（vLLM / Ollama / SiliconFlow / 各类网关），其模型 id 无法用内置正则分类；而 OpenAI 兼容端点统一接受 `reasoning_effort` 档位（`none / minimal / low / medium / high / xhigh / max`），与模型是否为「推理模型」无关。因此对自定义供应商直接按 API 风格（effectiveProvider）给出控件与 wire 格式，不需要模型勾选 `reasoning` 能力标志。非 chat 类型（image / embedding / rerank）保持无控件。
+
+> **注意**：自定义供应商上模型 id 与 API 风格即使「不匹配」（例如 Claude/Grok/Qwen 名字的模型挂在 openai 风格上）也不禁用——判定直接命中自定义分支，禁用（disabledReason）逻辑对其不生效，wire 以实际配置的 API 风格为准。这是有意为之：用户给自定义供应商配了什么端点，就该按什么协议发。
+
 ```ts
 getReasoningControlCapabilities(provider, model): {
   supported: boolean
@@ -92,7 +96,11 @@ getReasoningControlCapabilities(provider, model): {
 
 不匹配任何一项 → `DEFAULT_CAPABILITIES`（`supported: false`），控件隐藏、请求侧剥离参数。
 
-> 这些常量列表（`GPT_EFFORT_MODELS`、`CLAUDE_*`、`QWEN_THINKING_MODELS`、`GROK_REASONING_EFFORT_MODELS` 等）就是「写死的 model id / 前缀」的来源。**新增支持思考的模型，在这里加正则即可。**
+> **自定义供应商（`isCustomProviderId`，含 id 任意与字面值 `custom`）在此表之前单独命中**：chat/task 模型一律 `supported: true`，kind 由 `deriveReasoningKind(effectiveProvider, modelId, true)` 推导，不再要求 `capabilities` 含 `reasoning`（见 §1 例外）：
+> - **触发顺序在 `getApiStyleDisabledReason` 之前**，因此 API 风格不匹配的 disabledReason 对自定义供应商不生效——模型 id 恰好命中内置家族（`qwen3*` / `grok-4*` / `claude-*`…）也不会被当成交付端点错误而禁用；wire 完全跟随用户给自定义供应商配置的 API 风格。
+> - **DeepSeek id 在自定义供应商上固定走 `openai-effort`**（见下），因为 `deepseek` 命名空间仅原生 DeepSeek provider 类消费；自定义的 OpenAI/Claude/Responses 模型类只读 `openaiCompatible`/`claude`/`openai`，若写 `deepseek.reasoningEffort` 会被静默丢弃 → 这正是「调整无生效」的原因之一。Claude → `anthropic-effort`；其余/未知名 → `openai-effort`。
+
+> 这些常量列表（`GPT_EFFORT_MODELS`、`CLAUDE_*`、`QWEN_THINKING_MODELS`、`GROK_REASONING_EFFORT_MODELS` 等）就是「写死的 model id / 前缀」的来源。**新增内置供应商支持思考的模型，在这里加正则即可；自定义供应商无需修改（已全量开放）。**
 
 ### DeepSeek 官方协议与档位映射
 
@@ -204,8 +212,9 @@ const shouldStrip =
 
 ## 7. 新增 / 调整支持模型的检查清单
 
-1. 在 `reasoning-control.ts` 顶部对应的 model-id 列表 / 正则里增删条目（这是唯一可靠的判定来源）。
+1. 在 `reasoning-control.ts` 顶部对应的 model-id 列表 / 正则里增删条目（这是唯一可靠的判定来源，内置供应商用）。
 2. 如需新的关闭语义或档位映射，更新 `getReasoningProviderOptions` 中对应 effectiveProvider 分支。
 3. 若涉及新的 providerOptions 命名空间，同步更新 `ProviderOptionsSchema` 与 `stripReasoningProviderOptions` 的 `REASONING_PROVIDER_OPTION_KEYS`。
 4. 补充 `reasoning-control.test.ts` / `reasoning-request-options.test.ts` 用例。
 5. **切勿**改回用 `isSupportReasoning()` / `capabilities` 做支持判定。
+6. **自定义供应商**已对 chat/task 模型全量开放思考控制，无需（也无法）按 model id 维护白名单；`ModelEdit` 的 `Reasoning` 能力开关不再影响自定义模型是否显示思考控件。

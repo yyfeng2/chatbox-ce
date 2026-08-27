@@ -378,15 +378,29 @@ function isOpenAICompatibleApiStyle(provider: ModelProvider | undefined, model: 
  * the model's effective provider (resolved from its API style) so the emitted
  * parameters match the upstream API family. DeepSeek keeps its low/high/max
  * effort shaping; everything OpenAI-style shares reasoning_effort.
+ *
+ * When `customProvider` is true the DeepSeek id branch is skipped: custom model
+ * classes only read the openai/claude/openaiCompatible option namespaces, so a
+ * DeepSeek model behind an OpenAI-compatible endpoint must use the standard
+ * `reasoning_effort` wire (with the full none..max scale) instead of the DeepSeek
+ * namespace. Custom Claude endpoints keep the anthropic-effort wire.
  */
 function deriveReasoningKind(
   effectiveProvider: ModelProvider | undefined,
-  modelId: string
+  modelId: string,
+  customProvider?: boolean
 ): ReasoningControlCapabilities['kind'] {
   // DeepSeek reasoning models are detected by id (not only via the native DeepSeek
   // provider) so a V4 served through an OpenAI/Claude-style custom endpoint keeps the
   // DeepSeek kind — and therefore its distinctive max gear.
   if (isDeepSeekReasoningModel(modelId)) {
+    // Custom providers only consume the openai/claude/openaiCompatible option
+    // namespaces; the deepseek namespace is read exclusively by the native DeepSeek
+    // provider, so a DeepSeek model hosted behind an OpenAI-compatible custom endpoint
+    // would silently drop an effort written as `deepseek.reasoningEffort`. Route it
+    // through the standard reasoning_effort wire instead, which OpenAI-compatible
+    // servers (vLLM, Ollama, SiliconFlow, ...) accept for any model.
+    if (customProvider) return 'openai-effort'
     return isDeepSeekReasoningEffortModel(modelId) ? 'deepseek-effort' : 'toggle'
   }
   if (effectiveProvider === ModelProviderEnum.OpenRouter) return 'openrouter-reasoning'
@@ -411,22 +425,29 @@ export function getReasoningControlCapabilities(
   }
 
   const effectiveProvider = getEffectiveProvider(provider, model)
+
+  // Custom providers (user-created, arbitrary id, or the literal 'custom' type)
+  // proxy opaque upstream model ids, so no id-based heuristic can classify them and
+  // the api-style disabled checks below must not restrict them (an id that happens to
+  // match a built-in family — qwen3*, grok-4*, claude-* — still runs over an arbitrary
+  // endpoint the user controls). Every chat/task model on a custom provider exposes
+  // thinking controls: OpenAI-compatible endpoints (vLLM, Ollama, SiliconFlow, ...)
+  // accept the standard reasoning_effort scale (none/minimal/low/medium/high/xhigh/max)
+  // regardless of whether the model is a "reasoning" model. The wire format follows the
+  // model's API style. Non-chat models (image, embedding, rerank) stay control-free.
+  if (isCustomProviderId(provider) || provider === ModelProviderEnum.Custom) {
+    // Chat models (the default when type is unset) get thinking controls. Non-chat
+    // model types (image / embedding / rerank) stay control-free.
+    if (model?.type && model.type !== 'chat') {
+      return DEFAULT_CAPABILITIES
+    }
+    return { supported: true, kind: deriveReasoningKind(effectiveProvider, modelId, true) }
+  }
+
   const isChatboxDeepSeek = isChatboxAIDeepSeekWithOfficialApiStyle(provider, model)
   const disabledReason = getApiStyleDisabledReason(provider, effectiveProvider, model)
   if (disabledReason) {
     return { supported: false, kind: 'toggle', disabledReason }
-  }
-
-  // A custom-provider model that explicitly declares the reasoning capability gets
-  // thinking controls regardless of whether its id matches a built-in heuristic.
-  // Custom providers wrap opaque upstream model ids, so the capability flag (the
-  // ModelEdit "Reasoning" toggle) is the best signal we have; the wire format is
-  // derived from the model's effective provider (its API style). Built-in providers
-  // keep their precise id-based shaping below and never trust the flag — models.dev
-  // capability data is unreliable, so a builtin id that matches no reasoning
-  // heuristic stays control-free.
-  if (isCustomProviderId(provider) && model?.capabilities?.includes('reasoning')) {
-    return { supported: true, kind: deriveReasoningKind(effectiveProvider, modelId) }
   }
 
   // ChatboxAI's server-selected API style may change independently of the client.
@@ -564,6 +585,14 @@ function deriveReasoningControlLevel(
     )
   }
   if (model && isOpenAICompatibleApiStyle(provider, model) && isDeepSeekThinkingModel(model)) {
+    const custom = isCustomProviderId(provider) || provider === ModelProviderEnum.Custom
+    // Custom OpenAI-compatible endpoints always use the reasoning_effort wire for
+    // DeepSeek models (see deriveReasoningKind), so read the level back from
+    // openai.reasoningEffort; the legacy openaiCompatible.reasoning toggle still
+    // represents the on/off intent of older sessions.
+    if (custom) {
+      return normalizeEffortToLevel(providerOptions?.openai?.reasoningEffort)
+    }
     return deriveDeepSeekLevel(
       model.modelId,
       providerOptions?.deepseek?.thinking?.type ??
@@ -713,7 +742,17 @@ export function getReasoningProviderOptions(
     } else if (effectiveProvider === ModelProviderEnum.Claude) {
       next.claude = { thinking: { type: 'disabled', budgetTokens: 0 } }
     } else if (isOpenAICompatibleApiStyle(provider, model as ProviderModelInfo) && isDeepSeekThinkingModel(model)) {
-      next.deepseek = { thinking: { type: 'disabled' } }
+      // Custom OpenAI-compatible endpoints never receive the deepseek namespace (their
+      // getCallSettings only reads openai/claude/openaiCompatible), so a DeepSeek model's
+      // off state goes through the standard reasoning_effort=none/minimal wire.
+      if (isCustomProviderId(provider) || provider === ModelProviderEnum.Custom) {
+        next.openai = {
+          reasoningEffort: getOpenAIReasoningEffort(model?.modelId || '', 'off'),
+          forceReasoning: true,
+        }
+      } else {
+        next.deepseek = { thinking: { type: 'disabled' } }
+      }
     } else if (isOpenAIStyleEffectiveProvider(effectiveProvider)) {
       next.openai = {
         reasoningEffort: getOpenAIReasoningEffort(model?.modelId || '', level),
@@ -749,11 +788,21 @@ export function getReasoningProviderOptions(
       next.claude = { thinking: { type: 'enabled', budgetTokens: CLAUDE_BUDGET_BY_LEVEL[level] } }
     }
   } else if (isOpenAICompatibleApiStyle(provider, model as ProviderModelInfo) && isDeepSeekThinkingModel(model)) {
-    next.deepseek = {
-      thinking: { type: 'enabled' },
-      ...(isDeepSeekReasoningEffortModel(model?.modelId || '')
-        ? { reasoningEffort: DEEPSEEK_EFFORT_BY_LEVEL[level] }
-        : {}),
+    // Same custom-provider routing as the off branch above: a DeepSeek model behind an
+    // OpenAI-compatible custom endpoint uses the reasoning_effort wire (full scale)
+    // rather than the deepseek namespace its custom class never reads.
+    if (isCustomProviderId(provider) || provider === ModelProviderEnum.Custom) {
+      next.openai = {
+        reasoningEffort: getOpenAIReasoningEffort(model?.modelId || '', level),
+        forceReasoning: true,
+      }
+    } else {
+      next.deepseek = {
+        thinking: { type: 'enabled' },
+        ...(isDeepSeekReasoningEffortModel(model?.modelId || '')
+          ? { reasoningEffort: DEEPSEEK_EFFORT_BY_LEVEL[level] }
+          : {}),
+      }
     }
   } else if (isOpenAIStyleEffectiveProvider(effectiveProvider)) {
     // Keep compatible wire mappings in pickOpenAICompatibleReasoningOptions in sync when

@@ -1,6 +1,10 @@
 > **⚠️ 本定制版声明**
 >
-> 此文档描述**原始 Chatbox 项目**的功能设计。本仓库为本地化定制分支，已**彻底移除 Chatbox AI 官方服务依赖并清空全部自带 provider**，因此本文档中涉及 ChatboxAI 官方后端、自带供应商及已删除功能（VibeDrop / chatbox-cli / 官方 Web Search / 远程知识库解析等）的部分**不再适用**，仅作历史参考。具体差异请参阅 [README](../README.md) 的定制版说明。
+> 此文档描述**原始 Chatbox 项目的功能设计**。本仓库为本地化定制分支，已**彻底移除 Chatbox AI 官方服务依赖并清空全部自带 model provider**（`src/shared/providers/definitions/` 下不再有任何 provider 定义文件，只有 custom 自定义体系与 OAuth 保留）。
+>
+> 因此，本文档中关于 **内置供应商（ChatboxAI / OpenAI / Claude / Gemini / DeepSeek / Ollama 等 16 个自带供应商）**、**副作用导入注册**、以及已删除功能（VibeDrop / chatbox-cli / 官方 Web Search / 远程知识库解析等）的内容**不再适用**，仅作历史架构参考。
+>
+> 对当前定制版**仍然有效**的是：**注册表（Registry）架构本身**、**`createCustomProviderModel()` 自定义供应商动态支持**、**模型注册表（models.dev 富化）**、**OAuth 认证集成**。具体差异请参阅 [README](../../README.md) 的定制版说明。
 
 ---
 
@@ -18,7 +22,7 @@ Chatbox 的 AI 供应商（Provider）系统负责对接 30+ 家 AI 模型服务
 - **可扩展性**：新增内置供应商只需 4 个文件改动；用户自建供应商通过 `createCustomProviderModel()` 动态支持。
 - **关注点分离**：供应商定义（definition）与模型实现（model class）解耦，分别位于 `definitions/` 和 `definitions/models/`。
 
-关于此架构选型的决策记录，参见 [关键决策 #2：Registry 模式](./key-decisions.md)。
+关于此架构选型的决策记录，参见 [关键决策 #2：Registry 模式](./key-decisions.md)（注：`key-decisions.md` 在本 fork 中已不维护，该记录仅作历史参考）。
 
 ## 注册表架构
 
@@ -44,7 +48,10 @@ import './definitions/claude'
 // ... 其余供应商
 ```
 
-模块加载时 `defineProvider()` 自动执行，将供应商写入注册表。**导入顺序决定了 UI 中供应商的显示顺序**（ChatboxAI 始终排在首位）。
+模块加载时 `defineProvider()` 自动执行，将供应商写入注册表。**导入顺序决定了 UI 中供应商的显示顺序**（原项目中 ChatboxAI 始终排在首位）。
+
+> **⚠️ 定制版现状**：本 fork 已清空内置 provider，`definitions/` 下无任何定义文件，`index.ts` 仅 re-export
+> registry/custom 机制，不再有副作用导入注册。
 
 ### ProviderDefinition 结构
 
@@ -322,14 +329,18 @@ Provider 系统除了处理 API Key，也承载了桌面端 OAuth 登录能力�
 
 ### 当前内置供应商
 
-系统内置 16 个供应商定义（通过副作用导入注册），加上用户自建供应商，总共支持 30+ 家服务商。内置供应商涵盖：
-
-- **云端大厂**：OpenAI、Claude（Anthropic）、Gemini（Google）、Azure OpenAI
-- **专业服务**：DeepSeek、Groq、xAI、Mistral AI、Perplexity
-- **国内平台**：SiliconFlow（硅基流动）、VolcEngine（火山引擎）、ChatGLM（智谱）
-- **聚合平台**：OpenRouter
-- **本地推理**：Ollama、LM Studio
-- **自有服务**：ChatboxAI
+> **⚠️ 定制版现状已变更**：本 fork 已**清空全部自带供应商**（`src/shared/providers/definitions/` 下无任何 provider 定义文件）。
+> 因此，系统当前**不再内置任何云厂商/本地推理供应商**（OpenAI、Claude、Gemini、DeepSeek、Groq、Ollama 等均不预置），
+> 用户需通过**自定义供应商（custom）**或 **OAuth** 自行接入。
+>
+> 以下为原始项目内置 16 个供应商的历史清单，仅作参考：
+>
+> - **云端大厂**：OpenAI、Claude（Anthropic）、Gemini（Google）、Azure OpenAI
+> - **专业服务**：DeepSeek、Groq、xAI、Mistral AI、Perplexity
+> - **国内平台**：SiliconFlow（硅基流动）、VolcEngine（火山引擎）、ChatGLM（智谱）
+> - **聚合平台**：OpenRouter
+> - **本地推理**：Ollama、LM Studio
+> - **自有服务**：ChatboxAI
 
 ## 自建供应商
 
@@ -360,7 +371,7 @@ Provider 系统除了处理 API Key，也承载了桌面端 OAuth 登录能力�
 
 ### 旧方案（手动注册）
 
-记录于 [`docs/adding-provider.md`](../adding-provider.md)。添加一个新供应商需要修改 **7-8 个文件**：
+记录于 `docs/adding-provider.md`（旧文档，已删除）。添加一个新供应商需要修改 **7-8 个文件**：
 
 1. `types.ts` — 添加枚举值
 2. `models/your-provider.ts` — 创建模型实现
@@ -373,7 +384,7 @@ Provider 系统除了处理 API Key，也承载了桌面端 OAuth 登录能力�
 
 ### 新方案（注册表模式）
 
-记录于 [`docs/adding-new-provider.md`](../adding-new-provider.md)。添加一个新供应商只需 **4 个文件改动**：
+记录于 [`docs/adding-new-provider.md`](../adding-new-provider.md)。添加一个新供应商（原项目内置 provider）只需 **4 个文件改动**：
 
 1. `types.ts` — 添加枚举值
 2. `definitions/models/your-provider.ts` — 创建模型类
@@ -384,7 +395,6 @@ Provider 系统除了处理 API Key，也承载了桌面端 OAuth 登录能力�
 
 ## 添加新供应商
 
-本文档不重复具体步骤。详细的分步指南请参阅：
+本文档不重复具体步骤。详细的分步指南请参阅 [`docs/adding-new-provider.md`](../adding-new-provider.md)（描述 registry 架构的自定义供应商创建）。
 
-- **[`docs/adding-new-provider.md`](../adding-new-provider.md)**（当前推荐，注册表架构）
-- `docs/adding-provider.md`（旧版参考，已不推荐使用）
+> 注：旧版 `docs/adding-provider.md`（描述已被废弃的旧手动注册架构）已删除。当前自定义供应商通过 `createCustomProviderModel()` 动态创建，无需修改内置 registry。

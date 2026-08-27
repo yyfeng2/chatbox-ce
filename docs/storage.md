@@ -11,7 +11,7 @@ Chatbox 跨平台存储方案和版本迁移机制说明。
 - **LOCAL_STORAGE**: localStorage（已弃用）
 - **MOBILE_SQLITE**: SQLite 数据库（通过 Capacitor）
 
-### 当前方案（v1.17.0）
+### 当前方案（v1.30.0 / Config Version 15）
 
 | 平台 | Settings/Configs | Sessions | 原因 |
 |------|-----------------|----------|------|
@@ -29,6 +29,7 @@ Chatbox 跨平台存储方案和版本迁移机制说明。
 | v1.13.1 | 9-10 | - | - | Provider/Session 设置重构 |
 | v1.16.1 | 11-12 | **Sessions → IndexedDB**<br/>Configs 保持 File | **→ IndexedDB** | Desktop 分离存储<br/>Mobile 统一到 IndexedDB |
 | **v1.17.0** | **12-13** | Sessions 保持 IndexedDB<br/>Configs 保持 File | **→ SQLite** | Desktop 无变化<br/>Mobile 性能优化 |
+| **v1.30.0** | **14-15** | 无平台存储策略变化 | - | 内部数据格式/字段演进（会话元数据去 `archivedAt` 字段等） |
 
 **关键历史事实**：
 - Desktop 的 `configVersion`/`settings`/`configs` **从未** 存储在 IndexedDB 中
@@ -169,5 +170,5 @@ A: 增加 `CurrentVersion`，在 `migrateFunctions` 添加迁移函数，更新�
 
 ---
 
-**最后更新**: 2025-10-25 | **当前版本**: v1.17.0 (Config Version 13)
+**最后更新**: 2026-08 | **当前版本**: v1.30.0 (Config Version 15)
 

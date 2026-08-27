@@ -27,16 +27,16 @@ export type UiInventoryItem = {
   hasTranslation: boolean
 }
 
-export const uiInventoryGeneratedAt = '2026-07-04T17:57:13.774Z'
+export const uiInventoryGeneratedAt = '2026-08-26T00:00:00.000Z'
 
 export const uiInventorySummary = {
-  total: 230,
+  total: 229,
   byKind: {
     component: 131,
     story: 20,
     modal: 18,
     ui: 2,
-    page: 34,
+    page: 33,
     'route-component': 25,
   },
   byArea: {
@@ -49,7 +49,7 @@ export const uiInventorySummary = {
     'message-parts': 1,
     'model-selector': 5,
     session: 3,
-    settings: 37,
+    settings: 36,
     modal: 18,
     copilots: 9,
     dev: 7,
@@ -57,7 +57,7 @@ export const uiInventorySummary = {
     'image-creator': 10,
   },
   byPlatform: {
-    all: 200,
+    all: 199,
     mobile: 19,
     desktop: 14,
     web: 2,
@@ -4470,15 +4470,12 @@ export const uiInventoryItems: UiInventoryItem[] = [
     kind: 'component',
     area: 'session',
     components: [
-      'ARCHIVE_TIP_INTERVAL',
-      'ARCHIVE_TIP_STORAGE_KEY',
-      'ARCHIVED_SESSION_CLEANUP_THRESHOLD',
       'MOBILE_LONG_PRESS_DELAY',
       'MOBILE_LONG_PRESS_MOVE_TOLERANCE',
       'SessionItem',
     ],
     states: [
-      'archiving',
+      'deleting',
       'disabled',
       'error',
       'isSame',
@@ -4494,14 +4491,10 @@ export const uiInventoryItems: UiInventoryItem[] = [
     platformNotes: ['checks platform.type === mobile', 'responsive branch via isSmallScreen/useIsSmallScreen'],
     previewModes: ['desktop-wide', 'narrow/mobile-layout'],
     text: [
-      'Archive',
-      'Archived. Manage archived chats in Settings.',
-      'Clean up',
-      'Manage',
+      'Adjust order',
+      'Delete',
       'Pin',
-      'Too many archived chats',
       'Unpin',
-      'You have archived more than {{count}} chats. Do you want to clean them up now?',
     ],
     stories: [],
     storyNames: [],
@@ -8640,9 +8633,9 @@ export const uiInventoryItems: UiInventoryItem[] = [
     platformNotes: [],
     previewModes: [],
     text: [
-      'Archive',
       'Clear Conversation List',
-      'Keep only the Top <input /> Conversations in List and Archive the Rest',
+      'Delete',
+      'Keep only the Top <input /> Conversations in List and Delete the Rest',
     ],
     stories: [],
     storyNames: [],
@@ -9115,7 +9108,6 @@ export const uiInventoryItems: UiInventoryItem[] = [
     area: 'modal',
     components: [
       'RootRoute',
-      'SettingsArchiveRoute',
       'SettingsChatboxAiRoute',
       'SettingsChatRoute',
       'SettingsDefaultModelsRoute',
@@ -10892,42 +10884,6 @@ export const uiInventoryItems: UiInventoryItem[] = [
     ],
     hasDefaultExport: false,
     hasNiceModal: true,
-    hasTranslation: true,
-  },
-  {
-    path: 'src/renderer/routes/settings/archive.tsx',
-    title: 'routes/settings/archive',
-    kind: 'page',
-    area: 'settings',
-    route: '/settings/archive',
-    components: ['ArchivedSessionRow', 'Route', 'RouteComponent'],
-    states: ['busySessionIds', 'disabled', 'error', 'hasNextPage', 'isFetchingNextPage', 'isLoading', 'loading'],
-    variants: ['color:chatbox-tertiary', 'color:red', 'size:sm', 'subtle'],
-    platforms: ['all'],
-    platformNotes: [],
-    previewModes: [],
-    text: [
-      'Archived Chats',
-      'Archived chats are hidden from the chat list. You can restore or permanently delete them here.',
-      'Delete',
-      'Load More',
-      'No archived chats',
-      'Restore',
-    ],
-    stories: [],
-    storyNames: [],
-    storyTargets: [],
-    storybookIds: [],
-    dependencies: ['src/renderer/components/common/Avatar', 'src/renderer/components/common/ScalableIcon'],
-    previewLinks: [
-      {
-        label: 'Open route preview',
-        kind: 'route',
-        href: '/settings/archive',
-      },
-    ],
-    hasDefaultExport: false,
-    hasNiceModal: false,
     hasTranslation: true,
   },
   {

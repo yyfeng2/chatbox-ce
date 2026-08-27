@@ -1,8 +1,14 @@
 # 自动更新系统
 
-> Last updated: 2026-04
+> Last updated: 2026-08
 
 桌面端使用 **electron-updater** 实现自动更新。本文档描述更新机制、状态管理和测试方法。
+
+> **⚠️ 定制版声明**：本 fork 已**禁用自动更新与定时更新检查**——
+> - `src/main/app-updater.ts`：`autoDownload = false`、`autoInstallOnAppQuit = false`（不再自动下载/退出后自动安装）
+> - 已移除开机/每小时定时检查，仅在启动时（若 `autoUpdate` 开启）或用户手动触发时检查
+> - 设置页 `autoUpdate` 默认 `false`，设置页「自动更新/Beta 更新」开关置灰，关于页手动检查入口为 no-op
+> - 仅保留 `checkForUpdates()`（手动/启动检查）与 `quitAndInstall`（用户确认后安装）能力
 
 ---
 
@@ -38,12 +44,12 @@ Main Process                           Renderer Process
 
 构造时接收 `getWindow: () => BrowserWindow | null`，用于向 renderer 发送事件。
 
-**核心行为：**
+**核心行为（定制版现状）：**
 
-1. **启动检查**：如果用户开启了 `autoUpdate` 设置，延迟 5 秒后执行第一次检查，之后每小时检查一次
-2. **手动检查**：renderer 通过 `updater:check` IPC 触发
-3. **自动下载**：`autoDownload = true`，发现更新后自动下载
-4. **退出时安装**：`autoInstallOnAppQuit = true`
+1. **启动检查**：仅在用户开启了 `autoUpdate` 设置时，于启动后延迟执行一次 `checkForUpdates()`（无定时循环）
+2. **手动检查**：渲染进程通过 `updater:check` IPC 触发
+3. **自动下载**：`autoDownload = false`（发现更新后由用户决定是否下载）
+4. **退出时安装**：`autoInstallOnAppQuit = false`（仅在用户通过 UI 确认后调用 `quitAndInstall`）
 
 ### Feed URL Fallback
 

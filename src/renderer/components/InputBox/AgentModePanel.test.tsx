@@ -109,10 +109,6 @@ vi.mock('@/stores/chatStore', () => ({
   useSessionSettings: () => ({ sessionSettings: {} }),
 }))
 
-vi.mock('@/stores/premiumActions', () => ({
-  useAutoValidate: () => false,
-}))
-
 vi.mock('@/stores/session/agent-mode', () => ({
   setSessionAgentMode: vi.fn(),
   useSessionAgentMode: () => mocks.agentModeEntry,

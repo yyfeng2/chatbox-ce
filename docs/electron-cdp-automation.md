@@ -1,5 +1,11 @@
 # Electron CDP Automation Guide
 
+> **⚠️ 本定制版声明**
+>
+> 本文档的**底层机制仍有效**：CDP 远程调试、IPC 读写 `config.json` 的方法在当前 CE 定制版中可正常使用（经定制后本项目源码分发、无自动更新，CDP 端口与 `--user-data-dir` 行为不变）。
+>
+> 但文档中涉及若干**定制版已删除**的 Pro 专属功能，相关段落仅作历史参考，不可再依赖：**License 激活**（已移除 Chatbox AI 官方后端 `api.chatboxai.app/api/license/activate`）、**内置云端 MCP 服务器**（`mcp.chatboxai.app`，原需 license）、**Agent Mode 面板**等。下文对应小节已标注「定制版已删除」。
+
 Chatbox 桌面端基于 Electron 26 (Chromium 116)，通过 Chrome DevTools Protocol (CDP) 实现 UI 自动化。本文档记录了实际操作中的经验、陷阱和最佳实践。
 
 ## 启动
@@ -136,6 +142,8 @@ await evaluate(`
 
 ### License 激活
 
+> **定制版已删除**：本小节属于原 Chatbox Pro 的 License 体系，需要 Chatbox AI 官方后端 `api.chatboxai.app/api/license/activate`。CE 定制版已**彻底移除**该后端与 license 体系，不存在 license 激活、`isPremium` 检查或 premium 功能。以下内容仅供历史参考，**不可在定制版中使用**。
+
 仅设置 `licenseKey` 不够，`isPremium` 检查需要 `licenseInstances[licenseKey]` 有值：
 
 ```bash
@@ -157,7 +165,11 @@ Premium 状态影响的功能：
 - MCP 内置云端服务器（Fetch, Sequential Thinking, EdgeOne Pages, arXiv, Context7）
 - 部分高级 Skills
 
+> **定制版已删除**：上述「Premium 影响的功能」「内置云端 MCP 服务器」均依赖已移除的 license 与 `mcp.chatboxai.app` 后端，在定制版中不适用。
+
 ### MCP 内置服务器配置
+
+> **定制版已删除**：`enabledBuiltinServers` 指向原 `mcp.chatboxai.app` 云端服务器，现为本地定制版，**无内置云端 MCP**。如需 MCP，应通过自定义服务器（本地 Stdio / HTTP）配置。以下原样示例仅供历史参考。
 
 ```python
 settings['mcp'] = {
@@ -167,6 +179,8 @@ settings['mcp'] = {
 ```
 
 ## Agent Mode 面板交互
+
+> **定制版已删除**：Agent Mode 面板（以及下方「面板标签名」中「Chatbox AI」项）属于原 Pro 产品界面的模式面板，包含对已移除的 Chatbox AI 官方搜索/云端能力的引用。当前定制版不存在该 Agent Mode 面板。以下 hover 交互代码**仅供历史参考**。
 
 Agent Mode 使用 Mantine Popover，通过 hover 触发（`keepMounted` + `opened` state）。
 
@@ -214,6 +228,8 @@ async function hoverItem(text) {
 ```
 
 ### 面板标签名（多语言）
+
+> **定制版已删除**：该 Agent Mode 面板及其标签在定制版中不存在，以下仅为原 Pro 界面的历史记录。
 
 | 功能 | EN | ZH |
 |------|----|----|

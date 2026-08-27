@@ -115,10 +115,6 @@
 | macOS | macOS 11 (Big Sur) | Intel / Apple Silicon |
 | Linux | Ubuntu 20.04+ / 支持 AppImage 的发行版 | x64 |
 
-## 常见问题
-
--   [常见问题](./FAQ-CN.md)
-
 ## 开发
 
 ### 构建命令

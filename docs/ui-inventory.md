@@ -235,19 +235,6 @@ This inventory is code-derived from `src/renderer/routes`, `src/renderer/compone
 - Variants: `outline`
 - Text: `Back to HomePage`, `Conversation not found`
 
-### routes/settings/archive
-
-- Source: `src/renderer/routes/settings/archive.tsx`
-- Metadata: kind: `page`; area: `settings`; route: `/settings/archive`
-- Components: `ArchivedSessionRow`, `Route`, `RouteComponent`
-- Platform signals: `all`
-- Platform notes: None detected
-- Preview modes: None detected
-- Preview links: [Open route preview](/settings/archive)
-- States: `busySessionIds`, `disabled`, `error`, `hasNextPage`, `isFetchingNextPage`, `isLoading`, `loading`
-- Variants: `color:chatbox-tertiary`, `color:red`, `size:sm`, `subtle`
-- Text: `Archived Chats`, `Archived chats are hidden from the chat list. You can restore or permanently delete them here.`, `Delete`, `Load More`, `No archived chats`, `Restore`
-
 ### routes/settings/chat
 
 - Source: `src/renderer/routes/settings/chat.tsx`
@@ -508,7 +495,7 @@ This inventory is code-derived from `src/renderer/routes`, `src/renderer/compone
 - Preview links: [Storybook: Clear session list modal numeric retention state](http://localhost:6006/?path=/story/real-components-modals--clear-session-list-modal-numeric-retention-state)
 - States: `cleaning`, `loading`, `opened`, `value`, `visible`
 - Variants: None detected
-- Text: `Archive`, `Clear Conversation List`, `Keep only the Top <input /> Conversations in List and Archive the Rest`
+- Text: `Clear Conversation List`, `Delete`, `Keep only the Top <input /> Conversations in List and Delete the Rest`
 
 ### modals/ConfirmModal
 
@@ -644,7 +631,7 @@ This inventory is code-derived from `src/renderer/routes`, `src/renderer/compone
 
 - Source: `src/renderer/modals/Settings.tsx`
 - Metadata: kind: `modal`; area: `modal`
-- Components: `RootRoute`, `SettingsArchiveRoute`, `SettingsChatboxAiRoute`, `SettingsChatRoute`, `SettingsDefaultModelsRoute`, `SettingsDocumentParserRoute`, `SettingsGeneralRoute`, `SettingsHotkeysRoute`, `SettingsIndexRoute`, `SettingsKnowledgeBaseRoute`, `SettingsMcpRoute`, `SettingsProviderChatboxAiRoute`, `SettingsProviderIndexRoute`, `SettingsProviderProviderIdRoute`, `SettingsProviderRouteRoute`, `SettingsSkillsRoute`, `SettingsWebSearchRoute`
+- Components: `RootRoute`, `SettingsChatboxAiRoute`, `SettingsChatRoute`, `SettingsDefaultModelsRoute`, `SettingsDocumentParserRoute`, `SettingsGeneralRoute`, `SettingsHotkeysRoute`, `SettingsIndexRoute`, `SettingsKnowledgeBaseRoute`, `SettingsMcpRoute`, `SettingsProviderChatboxAiRoute`, `SettingsProviderIndexRoute`, `SettingsProviderProviderIdRoute`, `SettingsProviderRouteRoute`, `SettingsSkillsRoute`, `SettingsWebSearchRoute`
 - Platform signals: `all`
 - Platform notes: None detected
 - Preview modes: None detected
@@ -2115,14 +2102,14 @@ This inventory is code-derived from `src/renderer/routes`, `src/renderer/compone
 
 - Source: `src/renderer/components/session/SessionItem.tsx`
 - Metadata: kind: `component`; area: `session`
-- Components: `ARCHIVE_TIP_INTERVAL`, `ARCHIVE_TIP_STORAGE_KEY`, `ARCHIVED_SESSION_CLEANUP_THRESHOLD`, `MOBILE_LONG_PRESS_DELAY`, `MOBILE_LONG_PRESS_MOVE_TOLERANCE`, `SessionItem`
+- Components: `MOBILE_LONG_PRESS_DELAY`, `MOBILE_LONG_PRESS_MOVE_TOLERANCE`, `SessionItem`
 - Platform signals: `mobile`
 - Platform notes: `checks platform.type === mobile`, `responsive branch via isSmallScreen/useIsSmallScreen`
 - Preview modes: `desktop-wide`, `narrow/mobile-layout`
 - Preview links: [Storybook: Session item selected starred and picture states](http://localhost:6006/?path=/story/real-components-session--session-item-selected-starred-and-picture-states)
-- States: `archiving`, `disabled`, `error`, `isSame`, `isSmallScreen`, `loading`, `longPressing`, `mobileMenuOpened`, `opened`, `selected`
+- States: `deleting`, `disabled`, `error`, `isSame`, `isSmallScreen`, `loading`, `longPressing`, `mobileMenuOpened`, `opened`, `selected`
 - Variants: `color:chatbox-tertiary`, `size:sm`, `transparent`
-- Text: `Archive`, `Archived. Manage archived chats in Settings.`, `Clean up`, `Manage`, `Pin`, `Too many archived chats`, `Unpin`, `You have archived more than {{count}} chats. Do you want to clean them up now?`
+- Text: `Adjust order`, `Delete`, `Pin`, `Unpin`
 
 ### components/session/SessionList
 

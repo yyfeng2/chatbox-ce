@@ -17,19 +17,23 @@ const [session, setSession] = useState<Session>({
 })
 ```
 
-### 2. 临时状态管理：newSessionStateAtom
+### 2. 临时状态管理：newSessionState（uiStore）
 
-为了管理新会话的临时状态（如知识库选择、网页浏览模式等），系统使用了专门的 atom：
+为了管理新会话的临时状态（如知识库选择、网页浏览模式等），系统使用了 `uiStore`（Zustand）中的 `newSessionState` 字段：
 
 ```typescript
-// src/renderer/stores/atoms/uiAtoms.ts
-export const newSessionStateAtom = atom<{
-  knowledgeBase?: Pick<KnowledgeBase, 'id' | 'name'>
-  webBrowsing?: boolean
-}>({})
+// src/renderer/stores/uiStore.ts（Zustand store）
+interface UIState {
+  newSessionState: {
+    knowledgeBase?: Pick<KnowledgeBase, 'id' | 'name'>
+    webBrowsing?: boolean
+  } // 默认 {}
+  // ...
+  setNewSessionState: (value | updater) => void
+}
 ```
 
-这个 atom 专门存储用户在发送第一条消息前的各种选择和设置。
+这个 `newSessionState` 状态专门存储用户在发送第一条消息前的各种选择和设置。
 
 ## 工作流程
 
@@ -37,7 +41,7 @@ export const newSessionStateAtom = atom<{
 
 当用户在首页进行以下操作时，状态都保存在临时存储中：
 
-- **选择知识库**：存储在 `newSessionStateAtom.knowledgeBase`
+- **选择知识库**：存储在 `newSessionState.knowledgeBase`
 - **选择模型**：存储在组件的 `session` state 中
 - **选择 Copilot**：同样存储在组件的 `session` state 中
 
@@ -107,7 +111,7 @@ const handleSubmit = async (payload: InputBoxPayload) => {
 - 避免与真实的 UUID 冲突
 - 便于在代码中进行特殊处理
 
-### 2. 为什么需要 newSessionStateAtom？
+### 2. 为什么需要 newSessionState？
 
 - **职责分离**：临时状态和持久状态分开管理
 - **避免污染**：不会在 sessionKnowledgeBaseMap 中留下无效数据
@@ -123,18 +127,18 @@ const handleSubmit = async (payload: InputBoxPayload) => {
 ## 数据流图
 
 ```
-用户操作 → newSessionStateAtom (临时存储)
+用户操作 → newSessionState (临时存储)
     ↓
 发送消息 → 创建会话
     ↓
 状态转移 → sessionKnowledgeBaseMap[newSessionId] (持久存储)
     ↓
-清空临时状态 → newSessionStateAtom = {}
+清空临时状态 → newSessionState = {}
 ```
 
 ## 注意事项
 
-1. **内存管理**：newSessionStateAtom 在会话创建后会被清空，避免内存泄漏
+1. **内存管理**：newSessionState 在会话创建后会被清空，避免内存泄漏
 2. **并发安全**：状态转移是同步操作，避免了并发问题
 3. **用户体验**：整个过程对用户透明，选择的设置会无缝延续到新会话
 
@@ -142,5 +146,5 @@ const handleSubmit = async (payload: InputBoxPayload) => {
 
 - `/src/renderer/routes/index.tsx` - 首页组件
 - `/src/renderer/components/InputBox.tsx` - 输入框组件
-- `/src/renderer/stores/atoms/uiAtoms.ts` - UI 状态定义
+- `/src/renderer/stores/uiStore.ts` - UI 状态定义
 - `/src/renderer/stores/sessionActions.ts` - 会话相关操作

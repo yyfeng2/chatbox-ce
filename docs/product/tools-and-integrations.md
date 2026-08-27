@@ -1,6 +1,10 @@
 # 工具与集成
 
-> Last updated: 2026-04
+> Last updated: 2026-08
+
+> **⚠️ 本定制版声明**
+>
+> 本文档描述的是**原始 Chatbox Pro** 的产品功能。本仓库为本地化定制分支（Chatbox CE），已**彻底移除 Chatbox AI 官方服务依赖并清空全部自带 provider**，因此文中「Chatbox AI 内置搜索提供方」「License 体系」「内置云端 MCP 服务」等内容**已删除、不再适用**，仅作历史参考。Web Search（Bing / Tavily / BoCha / Querit）、MCP 自定义服务器、Agent Skills、代码执行等仍有效，予以保留。具体差异见文首各相应小节的「定制版已删除」标注。
 
 ## 概述
 
@@ -17,11 +21,12 @@ Chatbox Pro 通过工具系统扩展 AI 的能力，使 AI 不仅能生成文本
 
 | 提供方 | 网页搜索 | 读取网页 | 说明 |
 |--------|---------|---------|------|
-| Chatbox AI | ✓ | ✓ | 内置搜索，开箱即用 |
 | Bing | ✓ | ✗ | 免费使用，覆盖国际内容 |
 | Tavily | ✓ | ✓ | 高质量 AI 搜索，需自备 API Key |
 | BoCha | ✓ | ✗ | 国内搜索 API，需自备 API Key |
 | Querit | ✓ | ✗ | 多源聚合搜索，需自备 API Key |
+
+> **定制版已删除**：原表包含「Chatbox AI ✓ ✓ 内置搜索，开箱即用」一行，该内置搜索依赖 Chatbox AI 官方后端，已在定制版中移除。定制版不再有免配置的内置搜索提供方；Bing 可免费使用，其余需自备 API Key。
 
 设置页（设置 → 网页搜索）会在所选提供方下方明确列出该提供方支持哪些工具，便于用户选择。
 
@@ -29,7 +34,7 @@ Chatbox Pro 通过工具系统扩展 AI 的能力，使 AI 不仅能生成文本
 
 ### 工具失败时的引导
 
-当工具因为缺少配置而失败（例如选择了 Tavily 但没有填写 API Key、或选择了 Chatbox AI 但没有 license），消息中的工具气泡会自动展开，显示本地化的错误说明，并提供一键跳转链接（前往设置页输入 API Key、打开 license 页面、升级账户等），不再只是"工具调用失败"的红色提示。
+当工具因为缺少配置而失败（例如选择了 Tavily 但没有填写 API Key），消息中的工具气泡会自动展开，显示本地化的错误说明，并提供一键跳转链接（前往设置页输入 API Key 等），不再只是"工具调用失败"的红色提示。（原段落提及的「选择了 Chatbox AI 但没有 license」「打开 license 页面、升级账户」等 license 相关引导已随 license 体系移除。）
 
 ## MCP 工具扩展
 
@@ -37,15 +42,7 @@ Chatbox Pro 通过工具系统扩展 AI 的能力，使 AI 不仅能生成文本
 
 ### 内置 MCP 服务
 
-Chatbox 预置了一组云端 MCP 服务（付费功能），无需配置即可使用：
-
-| 服务 | 功能 |
-|------|------|
-| Fetch | 抓取网页内容 |
-| Sequential Thinking | 结构化思维推理辅助 |
-| EdgeOne Pages | 将 HTML 部署为公开网页 |
-| arXiv | 学术论文检索 |
-| Context7 | 编程库文档与代码示例检索 |
+> **定制版已删除**：原「Chatbox 预置了一组云端 MCP 服务（付费功能）」小节（Fetch / Sequential Thinking / EdgeOne Pages / arXiv / Context7，均连 `mcp.chatboxai.app`）已随 Chatbox AI 官方后端移除。定制版**无内置云端 MCP**，仅支持用户自定义 MCP 服务器（见下）。
 
 ### 自定义 MCP 服务器
 
@@ -88,7 +85,7 @@ On 模式下，AI 可在任务需要用户真实环境时通过 `user_exec` 执�
 
 > Skills 当前为桌面端能力，Web/移动端不显示相关入口。
 
-详见 [Agent Skills](./agent-skills.md)。
+详见技术文档 [`docs/technical/agent-skills.md`](../technical/agent-skills.md)。（原 `docs/product/agent-skills.md` 已删除。）
 
 ## 代码执行
 
@@ -111,4 +108,4 @@ On 模式下，AI 可在任务需要用户真实环境时通过 `user_exec` 执�
 - 查看文件列表和元信息
 - 按块读取特定文档内容
 
-详见 [知识库](./knowledge-base.md)。
+详见 `docs/product/knowledge-base.md`（已删除，不再适用）。

@@ -1,8 +1,12 @@
 # 构建与部署
 
-> Last updated: 2026-04
+> Last updated: 2026-08
 
-本文档描述 Chatbox Pro 的构建系统、依赖管理策略及各平台部署流程，聚焦关键决策的**原因**和踩过的坑。项目结构与命令清单见 [`AGENTS.md`](../../AGENTS.md)。
+> **⚠️ 本定制版声明**
+>
+> 本文档描述**原始 Chatbox Pro 项目**的构建/发布体系。本仓库为本地化定制分支（Chatbox CE），**以源码分发、不发布安装包**，因此文档中关于 CI 产物（dmg / nsis / AppImage / deb）、代码签名（AzureSignTool / `custom_win_sign.js`）、云端发布（Cloudflare R2 / 自动更新）等内容在定制版**不适用**。CE 定制版已禁用自动更新及更新检查（`src/main/app-updater.ts` 设 `autoDownload=false` / `autoInstallOnAppQuit=false`），构建产物仅供本地使用。下方构建工程经验（pnpm 迁移、Two-Package.json、pdfjs / libsql 打包陷阱）对 CE 定制版仍有参考价值，予以保留。
+
+本文档（原始背景）描述 Chatbox Pro 的构建系统、依赖管理策略及各平台部署流程，聚焦关键决策的**原因**和踩过的坑。项目结构与命令清单见 [`AGENTS.md`](../../AGENTS.md)。
 
 ---
 
@@ -18,7 +22,7 @@
 | preload | `src/preload/` | `out/preload/index.js` | 受限 Node.js |
 | renderer | `src/renderer/` | `out/renderer/` | Chromium |
 
-打包使用 **electron-builder**，配置在 `electron-builder.yml`，产出 dmg/nsis/AppImage/deb 格式安装包。发布通过 Cloudflare R2 S3 兼容存储分发，客户端内置自动更新（`electron-updater`）。
+打包使用 **electron-builder**，配置在 `electron-builder.yml`，产出 dmg/nsis/AppImage/deb 格式安装包。发布通过 Cloudflare R2 S3 兼容存储分发，客户端内置自动更新（`electron-updater`）。（以上为原始 Pro 描述；**CE 定制版以源码分发、不发布安装包，且已禁用自动更新**，见文首声明。）
 
 ---
 
@@ -26,7 +30,7 @@
 
 项目从 npm 迁移到 pnpm，主要动机是安装速度和磁盘效率。迁移的核心挑战在于 electron-builder 兼容性。
 
-**关键决策（[`./key-decisions.md`](./key-decisions.md) #6）**：采用 `node-linker=hoisted` 模式。
+**关键决策（原记录于 `docs/technical/key-decisions.md` #6，该文件已不在此仓库）**：采用 `node-linker=hoisted` 模式。
 
 electron-builder 假定 `node_modules` 为扁平结构（flat `node_modules`），而 pnpm 默认使用 symlink + `.pnpm` store 的隔离结构。如果不使用 hoisted 模式：
 
@@ -93,7 +97,7 @@ electron-vite 会将 renderer 代码打包为纯前端 bundle（类似 Vite 构�
 
 ## macOS 签名与 libsql 补丁传奇
 
-这是项目构建系统中最复杂的问题，经历了 **6 次尝试**才最终解决（来源：[`docs/libsql-patch-fix-attempts.md`](../libsql-patch-fix-attempts.md)）。
+这是项目构建系统中最复杂的问题，经历了 **6 次尝试**才最终解决（完整 6 次尝试记录原在 `docs/libsql-patch-fix-attempts.md`，该文件已不在此仓库）。
 
 ### 问题背景
 
@@ -114,13 +118,13 @@ electron-vite 会将 renderer 代码打包为纯前端 bundle（类似 Vite 构�
 
 ### 根因与最终方案
 
-**关键决策（[`./key-decisions.md`](./key-decisions.md) #7）**：在 macOS CI 构建中设置 `USE_HARD_LINKS=false`。
+**关键决策（原记录于 `docs/technical/key-decisions.md` #7，该文件已不在此仓库）**：在 macOS CI 构建中设置 `USE_HARD_LINKS=false`。
 
 electron-builder 在 CI 环境默认启用 hard link 优化（`builder-util/out/fs.js`）。当 multi-arch 构建（arm64 + x64）在同一个 job 中运行时，两个架构的 `app.asar.unpacked` 目录中的文件通过 hard link 共享同一个 inode。第一个架构签名后，第二个架构的依赖重建/patch 操作通过 hard link **间接修改**了已签名文件，破坏了 code signature。
 
 此问题仅在 **CI + multi-arch** 条件下出现：本地构建不启用 hard link，单架构构建无交叉污染。这使得问题极难在本地复现。
 
-**关键决策（[`./key-decisions.md`](./key-decisions.md) #8）**：使用 `afterPack` hook 执行 libsql patch。
+**关键决策（原记录于 `docs/technical/key-decisions.md` #8，该文件已不在此仓库）**：使用 `afterPack` hook 执行 libsql patch。
 
 electron-builder 的 hook 执行顺序为：
 
@@ -135,6 +139,8 @@ beforePack → installAppDependencies → copyAppFiles/asar → afterPack → si
 ---
 
 ## Windows 签名
+
+> **注（定制版）**：本小节及下方「CI/CD 流水线」描述的是原始 Pro 项目的商业代码签名与云端发布流程，**CE 定制版不适用**——定制版以源码分发，不构建签名安装包，也不配置 Azure Key Vault Secrets。留此仅为保留原项目的签名工程经验。其中 `WINDOWS_CODE_SIGNING_DISABLED` 环境变量若在延续旧 CI 脚本时遇到，设为 `true`/`1`/`yes` 即可显式跳过签名。
 
 Windows 安装包由 `electron-builder` 构建为 NSIS 安装包，并通过 `win.signtoolOptions.sign` 调用根目录的 `custom_win_sign.js`。签名脚本使用 AzureSignTool 连接 Azure Key Vault，调用保存在 Key Vault 中的 GlobalSign 代码签名证书完成 Authenticode 签名。
 
@@ -214,7 +220,9 @@ pnpm 迁移后，CI 的关键变更：
 
 ## 相关文档
 
-- libsql 签名修复记录（6 次尝试）：[`docs/libsql-patch-fix-attempts.md`](../libsql-patch-fix-attempts.md)
+> 注：以下指向 `libsql-patch-fix-attempts.md`、`architecture.md`、`key-decisions.md` 的链接在定制版仓库中**已不存在**（均已删除），保留链接仅为追溯原始出处。
+
+- libsql 签名修复记录（6 次尝试）：`docs/libsql-patch-fix-attempts.md`（已删除）
 - 依赖分离方案：[`docs/dependency-reorg.md`](../dependency-reorg.md)
-- 跨平台架构：[`docs/technical/architecture.md`](./architecture.md)
-- 关键决策记录：[`docs/technical/key-decisions.md`](./key-decisions.md)（决策 #6、#7、#8）
+- 跨平台架构：`docs/technical/architecture.md`（已删除）
+- 关键决策记录：`docs/technical/key-decisions.md`（已删除，决策 #6、#7、#8）

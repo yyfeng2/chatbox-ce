@@ -1,4 +1,11 @@
 const changelog = `
+## v1.30.0 - 2026.08.26
+1. Replaced chat archiving with direct deletion; deleted chats cannot be restored, so please proceed with care
+2. Removed the Chatbox AI backend dependency; model providers are now fully customizable
+3. Full reasoning effort levels (none/minimal/low/medium/high/xhigh/max)
+4. Disabled auto-update and background update checks
+5. Various stability improvements and bug fixes
+
 ## v1.22.2 - 2026.08.06
 1. Refined the classic message layout and overall interface, with customizable accent colors and color presets
 2. Organized alternative replies into collapsible branches for easier comparison and clearer conversation context

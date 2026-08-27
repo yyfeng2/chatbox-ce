@@ -4,8 +4,9 @@
 
 ### Test Framework
 - **Vitest** - Modern, ESM-first test runner with excellent TypeScript support
-- **@ai-sdk/provider-utils/test** - Mock server utilities for AI provider testing
 - **Testing Library** - Component testing utilities
+
+> **注**：旧文档曾提及 `@ai-sdk/provider-utils/test` 提供的 `createTestServer` mock server 工具。该包已被移出项目依赖（`package.json` 中不存在，源码中无任何 import），此模式**已失效**。当前项目的 API 测试使用 Vitest 内置 mock 能力（`vi.mock` / `vi.spyOn` / `vi.fn`）配合手动构造的 fetch stub 或真实 HTTP 层，见下文「Mock 策略」。
 
 ### Test Configuration
 ```typescript
@@ -58,34 +59,26 @@ export default defineConfig({
 ## Testing Patterns and Best Practices
 
 ### Mock Server Pattern
-For AI provider testing, use `createTestServer` from `@ai-sdk/provider-utils/test`:
+
+> **已失效**：本小节原描述 `@ai-sdk/provider-utils/test` 的 `createTestServer()` mock server 模式。该依赖已从项目移除，以下示例仅供历史参考，**不可再使用**。
 
 ```typescript
+// 历史示例（已不适用）——旧清单曾这样描述
 import { createTestServer } from '@ai-sdk/provider-utils/test'
 
 const server = createTestServer({
   'https://api.openai.com/v1/chat/completions': {
     headers: { 'Content-Type': 'text/event-stream' },
-    chunks: [
-      'data: {"id":"1","object":"chat.completion.chunk","choices":[{"delta":{"content":"Hello"}}]}\n\n',
-      'data: [DONE]\n\n',
-    ]
+    chunks: ['data: {"id":"1","object":"chat.completion.chunk","choices":[{"delta":{"content":"Hello"}}]}\n\n', 'data: [DONE]\n\n']
   }
 })
 ```
 
-### Handling Dynamic Responses
-Use `callNumber` parameter for different responses per call:
+**项目实际做法**：基于 Vitest 的 `vi.stubGlobal('fetch', ...)` 或注入 mock 的 HTTP 客户端，手动构造响应。例如测试流式解析时，stub 全局 `fetch` 返回一个 `ReadableStream`，再用 `for await` 消费；工具/错误分支则返回不同的 mock 响应体。这类手动 mock 已覆盖于 `src/shared/utils/`、`src/renderer/` 的既有测试。
 
-```typescript
-const server = createTestServer({
-  'https://api.openai.com/v1/chat/completions': ({ callNumber }) => ({
-    chunks: callNumber === 0 
-      ? ['data: {"choices":[{"delta":{"tool_calls":[...]}}]}\n\n']
-      : ['data: {"choices":[{"delta":{"content":"Result"}}]}\n\n']
-  })
-})
-```
+### Handling Dynamic Responses (history)
+
+按调用次数返回不同响应，同样用 Vitest 的 mock 函数 + 计数器实现，不依赖已移除的 `createTestServer` 的 `callNumber` 参数。
 
 ### Environment-Aware Code
 Suppress console output in tests:
@@ -147,7 +140,7 @@ The project has been successfully migrated from Jest to Vitest for better ESM su
 1. **Key Changes**
    - Replaced Jest configuration with Vitest config
    - Updated test scripts in package.json
-   - Fixed import issues with `@ai-sdk/provider-utils/test`
+   - Moved to Vitest-based mocking (the former `@ai-sdk/provider-utils/test` mock server utilities are no longer in the dependency tree)
    - Updated test expectations for new data structures
 
 2. **Benefits**

@@ -93,18 +93,18 @@ Chatbox 的会话系统围绕四个核心实体构建：
 ```
 用户打开首页 → 临时会话 (id="new")
     ↓ 选择模型、知识库、Copilot
-    ↓ 临时状态存储在 newSessionStateAtom
+    ↓ 临时状态存储在 newSessionState
     ↓
 用户发送消息 → 创建真正的会话 (id=UUID)
     ↓ 转移临时状态到新会话
-    ↓ 清空 newSessionStateAtom
+    ↓ 清空 newSessionState
     ↓ 切换路由到新会话
 ```
 
 ### 设计收益
 
 - **避免空会话污染**：未发送消息的会话不会出现在会话列表中。
-- **职责分离**：临时状态（`newSessionStateAtom`）与持久状态（`sessionKnowledgeBaseMap`）分开管理，互不干扰。
+- **职责分离**：临时状态（`newSessionState`）与持久状态（`sessionKnowledgeBaseMap`）分开管理，互不干扰。
 - **无缝体验**：用户在发送消息前的所有设置（模型选择、知识库、网页浏览模式等）在会话创建后自动继承。
 
 ---

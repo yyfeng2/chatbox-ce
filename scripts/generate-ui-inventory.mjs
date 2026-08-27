@@ -271,7 +271,7 @@ function inventoryFor(file) {
   const source = readFileSync(file, 'utf8')
   const relative = rel(file)
   const fallbackName = path.basename(file, '.tsx').replace(/^\$/, '')
-  const kind = detectKind(file, source)
+  const kind = detectKind(relative, source)
   const platformSignals = detectPlatformSignals(source)
   const storyDefinitions = kind === 'story' ? detectStories(source) : []
   const storybookTitle = kind === 'story' ? detectStorybookTitle(source) : undefined
@@ -280,7 +280,7 @@ function inventoryFor(file) {
     title: toTitle(relative),
     kind,
     area: detectArea(file),
-    route: detectRoute(file, source),
+    route: detectRoute(relative, source),
     components: detectComponents(source, fallbackName),
     states: detectStateNames(source),
     variants: detectVariants(source),

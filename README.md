@@ -119,10 +119,6 @@ We do not publish pre-built installers here (no official backend / hosting). To 
 | macOS | macOS 11 (Big Sur) | Intel/Apple Silicon |
 | Linux | Ubuntu 20.04+ / AppImage supported distros | x64 |
 
-## FAQ
-
--   [Frequently Asked Questions](./doc/FAQ.md)
-
 ## Development
 
 ### Build Commands

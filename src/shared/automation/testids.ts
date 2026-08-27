@@ -50,7 +50,7 @@ export const TestId = {
     sessionItem: 'session-item',
     sessionTitle: 'session-title',
     sessionPin: 'session-pin',
-    sessionArchive: 'session-archive',
+    sessionDelete: 'session-delete',
   },
   message: {
     item: 'message-item',

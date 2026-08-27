@@ -894,7 +894,6 @@ export function getSessionMeta(session: SessionMeta) {
     'name',
     'starred',
     'hidden',
-    'archivedAt',
     'assistantAvatarKey',
     'picUrl',
     'backgroundImage',

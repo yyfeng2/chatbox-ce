@@ -227,28 +227,28 @@ export async function switchToNext(reversed?: boolean) {
 }
 
 /**
- * Archive session list entries, keeping only specified number of sessions
+ * Delete session list entries, keeping only specified number of sessions
  */
-async function archiveSessionList(keepNum: number) {
+async function deleteSessionList(keepNum: number) {
   const sessionMetaList = await chatStore.listAllSessionsMeta()
-  const archived = sessionMetaList?.slice(keepNum)
-  if (!archived?.length) {
+  const toDelete = sessionMetaList?.slice(keepNum)
+  if (!toDelete?.length) {
     return
   }
-  await chatStore.archiveSessions(archived.map((s) => s.id))
-  // Navigate to home if the current session was archived
+  await chatStore.deleteSessions(toDelete.map((s) => s.id))
+  // Navigate to home if the current session was deleted
   const store = getDefaultStore()
   const currentSessionId = store.get(atoms.currentSessionIdAtom)
-  if (currentSessionId && archived.some((d) => d.id === currentSessionId)) {
+  if (currentSessionId && toDelete.some((d) => d.id === currentSessionId)) {
     router.navigate({ to: '/', replace: true })
   }
 }
 
 /**
- * Clear conversation list by archiving entries, keeping only specified number of sessions (from top)
+ * Clear conversation list by deleting entries, keeping only specified number of sessions (from top)
  */
 export async function clearConversationList(keepNum: number) {
-  await archiveSessionList(keepNum)
+  await deleteSessionList(keepNum)
 }
 
 /**

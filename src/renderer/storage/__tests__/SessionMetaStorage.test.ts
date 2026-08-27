@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
-import { beforeEach, describe, expect, it } from 'vitest'
 import type { SessionMetaRecord } from '@shared/types'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { IndexedDBSessionMetaStorage } from '../SessionMetaStorage'
 
 function makeRecord(overrides: Partial<SessionMetaRecord> & { id: string }): SessionMetaRecord {
@@ -27,7 +27,6 @@ function createStoreIndexes(store: IDBObjectStore, indexSet: IndexSet) {
   store.createIndex('createdAt', 'createdAt', { unique: false })
   if (indexSet === 'current') {
     store.createIndex('starredSortOrder', ['starred', 'sortOrder'], { unique: false })
-    store.createIndex('archivedAt', 'archivedAt', { unique: false })
   }
 }
 
@@ -107,7 +106,7 @@ describe('IndexedDBSessionMetaStorage', () => {
     expect(db.version).toBe(1)
     const tx = db.transaction('records', 'readonly')
     const store = tx.objectStore('records')
-    expect(store.indexNames.contains('archivedAt')).toBe(false)
+    expect(store.indexNames.contains('starredSortOrder')).toBe(false)
   })
 
   it('update existing record', async () => {
@@ -170,56 +169,12 @@ describe('IndexedDBSessionMetaStorage', () => {
     expect(all[0].id).toBe('visible')
   })
 
-  it('getArchived returns hidden records sorted by sortOrder desc', async () => {
-    await storage.create(makeRecord({ id: 'visible', sortOrder: 300 }))
-    await storage.create(makeRecord({ id: 'hidden-system', sortOrder: 400, hidden: true }))
-    await storage.create(makeRecord({ id: 'hidden-old', sortOrder: 100, hidden: true, archivedAt: 1000 }))
-    await storage.create(makeRecord({ id: 'hidden-new', sortOrder: 200, hidden: true, archivedAt: 2000 }))
-
-    const archived = await storage.getArchived()
-    expect(archived.map((record) => record.id)).toEqual(['hidden-new', 'hidden-old'])
-  })
-
   it('getAllIncludingHidden returns visible and hidden records', async () => {
     await storage.create(makeRecord({ id: 'visible', sortOrder: 100 }))
-    await storage.create(makeRecord({ id: 'hidden', sortOrder: 200, hidden: true, archivedAt: 1000 }))
+    await storage.create(makeRecord({ id: 'hidden', sortOrder: 200, hidden: true }))
 
     const all = await storage.getAllIncludingHidden()
     expect(all.map((record) => record.id)).toEqual(['hidden', 'visible'])
-  })
-
-  it('getArchivedPage returns archived records with cursor pagination', async () => {
-    await storage.create(makeRecord({ id: 'visible', sortOrder: 500 }))
-    await storage.create(makeRecord({ id: 'archived-1', sortOrder: 100, hidden: true, archivedAt: 1000 }))
-    await storage.create(makeRecord({ id: 'archived-2', sortOrder: 200, hidden: true, archivedAt: 2000 }))
-    await storage.create(makeRecord({ id: 'archived-3', sortOrder: 300, hidden: true, archivedAt: 3000 }))
-
-    const firstPage = await storage.getArchivedPage(0, 2)
-    expect(firstPage.items.map((record) => record.id)).toEqual(['archived-3', 'archived-2'])
-    expect(firstPage.nextCursor).toBe(2)
-    expect(firstPage.total).toBe(3)
-
-    expect(firstPage.nextCursor).not.toBeNull()
-    const secondPage = await storage.getArchivedPage(firstPage.nextCursor ?? 0, 2)
-    expect(secondPage.items.map((record) => record.id)).toEqual(['archived-1'])
-    expect(secondPage.nextCursor).toBeNull()
-    expect(secondPage.total).toBe(3)
-  })
-
-  it('getArchivedPage falls back to sorted scans when archivedAt index is missing', async () => {
-    storage = new TestSessionMetaStorage(`test-db-${++dbCounter}`, { indexSet: 'legacy' })
-    await storage.create(makeRecord({ id: 'a-new', sortOrder: 100, hidden: true, archivedAt: 3000 }))
-    await storage.create(makeRecord({ id: 'm-mid', sortOrder: 200, hidden: true, archivedAt: 2000 }))
-    await storage.create(makeRecord({ id: 'z-old', sortOrder: 300, hidden: true, archivedAt: 1000 }))
-
-    const firstPage = await storage.getArchivedPage(0, 2)
-    expect(firstPage.items.map((record) => record.id)).toEqual(['a-new', 'm-mid'])
-    expect(firstPage.nextCursor).toBe(2)
-    expect(firstPage.total).toBe(3)
-
-    const secondPage = await storage.getArchivedPage(firstPage.nextCursor ?? 0, 2)
-    expect(secondPage.items.map((record) => record.id)).toEqual(['z-old'])
-    expect(secondPage.nextCursor).toBeNull()
   })
 
   it('createMany batch inserts', async () => {
@@ -254,13 +209,6 @@ describe('IndexedDBSessionMetaStorage', () => {
     await storage.create(makeRecord({ id: 'a', sortOrder: 100 }))
     await storage.create(makeRecord({ id: 'b', sortOrder: 200, hidden: true }))
     expect(await storage.getAllTotal()).toBe(2)
-  })
-
-  it('getArchivedTotal counts archived records only', async () => {
-    await storage.create(makeRecord({ id: 'a', sortOrder: 100 }))
-    await storage.create(makeRecord({ id: 'b', sortOrder: 200, hidden: true }))
-    await storage.create(makeRecord({ id: 'c', sortOrder: 300, hidden: true, archivedAt: 1000 }))
-    expect(await storage.getArchivedTotal()).toBe(1)
   })
 
   describe('getPage', () => {
@@ -322,7 +270,6 @@ describe('IndexedDBSessionMetaStorage', () => {
     await storage.clear()
     expect(await storage.getTotal()).toBe(0)
     expect(await storage.getAllTotal()).toBe(0)
-    expect(await storage.getArchivedTotal()).toBe(0)
     expect(await storage.getAll()).toEqual([])
   })
 })

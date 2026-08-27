@@ -80,7 +80,6 @@ function deriveSessionMeta(session: Session, existing?: SessionMetaRecord): Sess
     name: session.name,
     starred: session.starred,
     hidden: session.hidden,
-    archivedAt: session.archivedAt,
     assistantAvatarKey: session.assistantAvatarKey,
     picUrl: session.picUrl,
     backgroundImage: session.backgroundImage,

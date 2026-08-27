@@ -21,7 +21,6 @@ const {
   useSessionMock,
   getSessionMock,
   listAllSessionsMetaMock,
-  archiveSessionsMock,
   deleteSessionsMock,
   routerNavigateMock,
   sessionAgentModeMapMock,
@@ -34,7 +33,6 @@ const {
   useSessionMock: vi.fn(),
   getSessionMock: vi.fn(),
   listAllSessionsMetaMock: vi.fn(),
-  archiveSessionsMock: vi.fn(),
   deleteSessionsMock: vi.fn(),
   routerNavigateMock: vi.fn(),
   sessionAgentModeMapMock: {} as Record<
@@ -85,7 +83,6 @@ vi.mock('./chatStore', () => ({
   getSession: getSessionMock,
   useSession: useSessionMock,
   listAllSessionsMeta: listAllSessionsMetaMock,
-  archiveSessions: archiveSessionsMock,
   deleteSessions: deleteSessionsMock,
 }))
 
@@ -198,7 +195,6 @@ beforeEach(() => {
   useSessionMock.mockReset()
   getSessionMock.mockReset()
   listAllSessionsMetaMock.mockReset()
-  archiveSessionsMock.mockReset()
   deleteSessionsMock.mockReset()
   routerNavigateMock.mockReset()
   for (const key of Object.keys(sessionAgentModeMapMock)) {
@@ -209,19 +205,18 @@ beforeEach(() => {
 })
 
 describe('conversation list cleanup', () => {
-  test('archives sessions outside the kept range instead of deleting them', async () => {
+  test('deletes sessions outside the kept range', async () => {
     listAllSessionsMetaMock.mockResolvedValue([
       makeSessionMeta('keep-1', 300),
       makeSessionMeta('keep-2', 200),
-      makeSessionMeta('archive-1', 100),
-      makeSessionMeta('archive-2', 0),
+      makeSessionMeta('delete-1', 100),
+      makeSessionMeta('delete-2', 0),
     ])
 
     await sessionActions.clearConversationList(2)
 
-    expect(archiveSessionsMock).toHaveBeenCalledTimes(1)
-    expect(archiveSessionsMock).toHaveBeenCalledWith(['archive-1', 'archive-2'])
-    expect(deleteSessionsMock).not.toHaveBeenCalled()
+    expect(deleteSessionsMock).toHaveBeenCalledTimes(1)
+    expect(deleteSessionsMock).toHaveBeenCalledWith(['delete-1', 'delete-2'])
   })
 })
 

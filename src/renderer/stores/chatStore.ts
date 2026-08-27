@@ -49,7 +49,6 @@ import { UpdateQueue } from './updateQueue'
 
 export const QueryKeys = {
   ChatSessionsList: ['chat-sessions-list'],
-  ArchivedChatSessionsList: ['archived-chat-sessions-list'],
   ChatSession: (id: string) => ['chat-session', id],
   ChatSessionSettings: (id: string) => ['chat-session-settings', id],
 }
@@ -121,43 +120,9 @@ export async function listAllSessionsMeta(): Promise<SessionMetaRecord[]> {
   return items
 }
 
-async function _listArchivedSessionsMetaPage(cursor: number): Promise<SessionMetaPage> {
-  const metaStorage = await getMetaStorage()
-  return await metaStorage.getArchivedPage(cursor)
-}
-
-export async function listArchivedSessionsMetaPage(cursor: number, limit?: number): Promise<SessionMetaPage> {
-  const metaStorage = await getMetaStorage()
-  return await metaStorage.getArchivedPage(cursor, limit)
-}
-
 export async function countSessionsMeta(): Promise<number> {
   const metaStorage = await getMetaStorage()
   return await metaStorage.getTotal()
-}
-
-export async function countArchivedSessionsMeta(): Promise<number> {
-  const metaStorage = await getMetaStorage()
-  return await metaStorage.getArchivedTotal()
-}
-
-const listArchivedSessionsMetaQueryOptions = {
-  queryKey: QueryKeys.ArchivedChatSessionsList,
-  queryFn: ({ pageParam }: { pageParam: number }) => _listArchivedSessionsMetaPage(pageParam),
-  getNextPageParam: (lastPage: SessionMetaPage) => lastPage.nextCursor,
-  initialPageParam: 0,
-  staleTime: Infinity,
-}
-
-export async function listArchivedSessionsMeta(): Promise<SessionMetaRecord[]> {
-  const items: SessionMetaRecord[] = []
-  let cursor: number | null = 0
-  while (cursor !== null) {
-    const page = await listArchivedSessionsMetaPage(cursor)
-    items.push(...page.items)
-    cursor = page.nextCursor
-  }
-  return items
 }
 
 export function useSessionList() {
@@ -169,19 +134,6 @@ export function useSessionList() {
     fetchNextPage: result.fetchNextPage,
     hasNextPage: result.hasNextPage,
     isFetchingNextPage: result.isFetchingNextPage,
-  }
-}
-
-export function useArchivedSessionList() {
-  const result = useInfiniteQuery(listArchivedSessionsMetaQueryOptions)
-  const archivedSessionMetaList = useMemo(() => result.data?.pages.flatMap((p) => p.items), [result.data])
-  return {
-    archivedSessionMetaList,
-    refetch: result.refetch,
-    fetchNextPage: result.fetchNextPage,
-    hasNextPage: result.hasNextPage,
-    isFetchingNextPage: result.isFetchingNextPage,
-    isLoading: result.isLoading,
   }
 }
 
@@ -216,34 +168,6 @@ export async function refreshSessionListCache() {
   queryClient.setQueryData<InfiniteSessionData>(QueryKeys.ChatSessionsList, {
     pages: [firstPage],
     pageParams: [0],
-  })
-}
-
-async function refreshArchivedSessionListCache() {
-  const firstPage = await _listArchivedSessionsMetaPage(0)
-  queryClient.setQueryData<InfiniteSessionData>(QueryKeys.ArchivedChatSessionsList, {
-    pages: [firstPage],
-    pageParams: [0],
-  })
-}
-
-function updateArchivedSessionListData(updater: (items: SessionMetaRecord[]) => SessionMetaRecord[]) {
-  queryClient.setQueryData<InfiniteSessionData>(QueryKeys.ArchivedChatSessionsList, (old) => {
-    if (!old || !old.pages.length) return old
-    const allItems = old.pages.flatMap((p) => p.items)
-    const updated = updater(allItems)
-    const lastPage = old.pages[old.pages.length - 1]
-    const delta = updated.length - allItems.length
-    return {
-      pages: [
-        {
-          items: updated,
-          nextCursor: lastPage.nextCursor !== null ? lastPage.nextCursor + delta : null,
-          total: (lastPage.total || 0) + delta,
-        },
-      ],
-      pageParams: [0],
-    }
   })
 }
 
@@ -488,52 +412,7 @@ export async function deleteSession(id: string) {
   const metaStorage = await getMetaStorage()
   await metaStorage.delete(id)
   updateSessionListData((items) => items.filter((session) => session.id !== id))
-  updateArchivedSessionListData((items) => items.filter((session) => session.id !== id))
   cleanupDeletedSessionRuntimeState(id)
-}
-
-export async function archiveSession(id: string) {
-  await updateSession(id, { hidden: true, archivedAt: Date.now() })
-  await refreshArchivedSessionListCache()
-}
-
-// 这里刻意逐个走 updateSession，保证完整 session 存储和 meta 存储一致。
-// 该实现不针对超大批量归档做性能优化。
-export async function archiveSessions(ids: string[]) {
-  const uniqueIds = [...new Set(ids)]
-  if (uniqueIds.length === 0) return
-
-  const archivedAt = Date.now()
-  const missingSessionIds: string[] = []
-  await runInChunks(uniqueIds, 20, async (id) => {
-    try {
-      await updateSession(id, { hidden: true, archivedAt })
-    } catch (error) {
-      if (error instanceof Error && error.message === `Session ${id} not found`) {
-        missingSessionIds.push(id)
-        return
-      }
-      throw error
-    }
-  })
-
-  if (missingSessionIds.length > 0) {
-    await cleanupSessionAttachmentRagEntries(missingSessionIds, 'stale session meta cleanup')
-    const metaStorage = await getMetaStorage()
-    await metaStorage.deleteMany(missingSessionIds)
-    for (const id of missingSessionIds) {
-      cleanupDeletedSessionRuntimeState(id)
-    }
-  }
-
-  await refreshSessionListCache()
-  await refreshArchivedSessionListCache()
-}
-
-export async function restoreSession(id: string) {
-  await updateSession(id, { hidden: false, archivedAt: undefined })
-  await refreshSessionListCache()
-  updateArchivedSessionListData((items) => items.filter((session) => session.id !== id))
 }
 
 export async function deleteSessions(ids: string[]) {
@@ -549,7 +428,6 @@ export async function deleteSessions(ids: string[]) {
   const metaStorage = await getMetaStorage()
   await metaStorage.deleteMany(uniqueIds)
   await refreshSessionListCache()
-  updateArchivedSessionListData((items) => items.filter((session) => !uniqueIds.includes(session.id)))
 
   for (const id of uniqueIds) {
     cleanupDeletedSessionRuntimeState(id)

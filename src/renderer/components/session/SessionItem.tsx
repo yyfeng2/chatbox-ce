@@ -1,29 +1,23 @@
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
-import NiceModal from '@ebay/nice-modal-react'
 import { ActionIcon, Flex, Text } from '@mantine/core'
 import { TestId } from '@shared/automation/testids'
 import type { SessionMetaRecord } from '@shared/types'
-import { IconArchive, IconArrowsMoveVertical, IconPinned, IconPinnedFilled } from '@tabler/icons-react'
+import { IconArrowsMoveVertical, IconPinned, IconPinnedFilled, IconTrash } from '@tabler/icons-react'
 import clsx from 'clsx'
 import dayjs from 'dayjs'
 import { type MouseEvent, memo, type PointerEvent, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AppTooltip as Tooltip } from '@/components/ui/tooltip'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
-import { navigateToSettings } from '@/modals/Settings'
 import platform from '@/platform'
 import { router } from '@/router'
-import { archiveSession, countArchivedSessionsMeta, updateSession as updateSessionStore } from '@/stores/chatStore'
+import { confirmSessionDeletion, deleteSession, updateSession as updateSessionStore } from '@/stores/chatStore'
 import { switchCurrentSession } from '@/stores/sessionActions'
-import * as toastActions from '@/stores/toastActions'
 import { useUIStore } from '@/stores/uiStore'
 import ActionMenu, { type ActionMenuItemProps } from '../ActionMenu'
 import { AssistantAvatar } from '../common/Avatar'
 import { ScalableIcon } from '../common/ScalableIcon'
 
-const ARCHIVE_TIP_STORAGE_KEY = 'chatbox:lastArchiveSessionTipAt'
-const ARCHIVE_TIP_INTERVAL = 24 * 60 * 60 * 1000
-const ARCHIVED_SESSION_CLEANUP_THRESHOLD = 600
 const MOBILE_LONG_PRESS_DELAY = 550
 const MOBILE_LONG_PRESS_MOVE_TOLERANCE = 10
 
@@ -60,7 +54,7 @@ function SessionItem(props: Props) {
   const { session, selected } = props
   const { t } = useTranslation()
   const pinActionLabel = session.starred ? t('Unpin') : t('Pin')
-  const archiveActionLabel = t('Archive')
+  const deleteActionLabel = t('Delete')
   const setShowSidebar = useUIStore((s) => s.setShowSidebar)
   const onClick = () => {
     if (props.isReordering) {
@@ -78,7 +72,7 @@ function SessionItem(props: Props) {
   const isSmallScreen = useIsSmallScreen()
   // const smallSize = theme.typography.pxToRem(20)
 
-  const [archiving, setArchiving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [actionTooltipDismissed, setActionTooltipDismissed] = useState(false)
   const [mobileMenuOpened, setMobileMenuOpened] = useState(false)
   const [longPressing, setLongPressing] = useState(false)
@@ -95,47 +89,23 @@ function SessionItem(props: Props) {
     setActionTooltipDismissed(true)
   }
 
-  const showArchiveTipOncePerDay = () => {
-    const now = Date.now()
-    const lastTipAt = Number(localStorage.getItem(ARCHIVE_TIP_STORAGE_KEY) || 0)
-    if (now - lastTipAt < ARCHIVE_TIP_INTERVAL) {
+  const deleteCurrentSession = async () => {
+    if (deleting) {
       return
     }
-    localStorage.setItem(ARCHIVE_TIP_STORAGE_KEY, String(now))
-    toastActions.add(t('Archived. Manage archived chats in Settings.') || '', 8000, {
-      label: t('Manage') || '',
-      settingsPath: '/archive',
-    })
-  }
-
-  const archiveCurrentSession = async () => {
-    if (archiving) {
-      return
-    }
-    setArchiving(true)
+    setDeleting(true)
     try {
-      await archiveSession(session.id)
+      if (!(await confirmSessionDeletion(session.id))) {
+        return
+      }
+      await deleteSession(session.id)
       if (selected) {
         await router.navigate({ to: '/', replace: true })
       }
-      const archivedSessionCount = await countArchivedSessionsMeta()
-      if (archivedSessionCount > ARCHIVED_SESSION_CLEANUP_THRESHOLD) {
-        const confirmed = await NiceModal.show('confirm', {
-          title: t('Too many archived chats'),
-          message: t('You have archived more than {{count}} chats. Do you want to clean them up now?', {
-            count: ARCHIVED_SESSION_CLEANUP_THRESHOLD,
-          }),
-          confirmText: t('Clean up'),
-        })
-        if (confirmed === true) {
-          navigateToSettings('/archive')
-        }
-      } else {
-        showArchiveTipOncePerDay()
-      }
     } catch (error) {
-      console.error('Failed to archive session:', error)
-      setArchiving(false)
+      console.error('Failed to delete session:', error)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -210,11 +180,11 @@ function SessionItem(props: Props) {
       onClick: props.onStartReordering,
     },
     {
-      text: archiveActionLabel || '',
-      icon: IconArchive,
-      disabled: archiving,
+      text: deleteActionLabel || '',
+      icon: IconTrash,
+      disabled: deleting,
       onClick: () => {
-        void archiveCurrentSession()
+        void deleteCurrentSession()
       },
     },
   ]
@@ -303,25 +273,25 @@ function SessionItem(props: Props) {
           </ActionIcon>
         </Tooltip>
 
-        <Tooltip label={archiveActionLabel} openDelay={1000} withArrow disabled={actionTooltipDismissed}>
+        <Tooltip label={deleteActionLabel} openDelay={1000} withArrow disabled={actionTooltipDismissed}>
           <ActionIcon
-            data-testid={TestId.sidebar.sessionArchive}
-            aria-label={archiveActionLabel}
+            data-testid={TestId.sidebar.sessionDelete}
+            aria-label={deleteActionLabel}
             variant="transparent"
             size={20}
             color="chatbox-tertiary"
-            loading={archiving}
+            loading={deleting}
             onPointerDown={stopItemClick}
             onClick={async (event) => {
               stopItemClick(event)
-              if (archiving) {
+              if (deleting) {
                 return
               }
               dismissActionTooltip()
-              await archiveCurrentSession()
+              await deleteCurrentSession()
             }}
           >
-            <ScalableIcon icon={IconArchive} className="text-inherit" size={16} />
+            <ScalableIcon icon={IconTrash} className="text-inherit" size={16} />
           </ActionIcon>
         </Tooltip>
       </Flex>

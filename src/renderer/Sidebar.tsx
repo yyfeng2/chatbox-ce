@@ -4,7 +4,6 @@ import { ActionIcon, Box, Button, Flex, Image, NavLink, Stack, Text } from '@man
 import SwipeableDrawer from '@mui/material/SwipeableDrawer'
 import { TestId } from '@shared/automation/testids'
 import {
-  IconArchive,
   IconCirclePlus,
   IconCode,
   IconDownload,
@@ -14,6 +13,7 @@ import {
   IconPhotoPlus,
   IconSearch,
   IconSettingsFilled,
+  IconTrash,
 } from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
 import clsx from 'clsx'
@@ -214,7 +214,7 @@ export default function Sidebar() {
                 radius="md"
                 onClick={() => NiceModal.show('clear-session-list')}
               >
-                <IconArchive size={18} />
+                <IconTrash size={18} />
               </ActionIcon>
             </Tooltip>
             <Tooltip label={t('Collapse')} openDelay={1000} withArrow>

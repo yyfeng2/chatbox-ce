@@ -51,7 +51,7 @@ const ClearSessionList = NiceModal.create(() => {
     >
       <div>
         <Trans
-          i18nKey="Keep only the Top <input /> Conversations in List and Archive the Rest"
+          i18nKey="Keep only the Top <input /> Conversations in List and Delete the Rest"
           values={{ n: value }}
           components={{
             input: (
@@ -70,7 +70,7 @@ const ClearSessionList = NiceModal.create(() => {
       <AdaptiveModal.Actions>
         <AdaptiveModal.CloseButton onClick={handleClose} />
         <Button onClick={clean} loading={cleaning}>
-          {t('Archive')}
+          {t('Delete')}
         </Button>
       </AdaptiveModal.Actions>
     </AdaptiveModal>

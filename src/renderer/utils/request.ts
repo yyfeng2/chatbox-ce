@@ -62,7 +62,11 @@ async function doRequest(url: string, options: RequestOptions): Promise<Response
   }
 
   const makeRequest = async () => {
-    if (platform.type === 'mobile' && useProxy) {
+    if (platform.type === 'mobile') {
+      // The mobile WebView always bridges API requests through the native HTTP
+      // layer (CapacitorHttp / stream-http): its https origin blocks cleartext
+      // http and CORS-blocked endpoints regardless of the compatibility toggle,
+      // so a plain fetch here would fail with "Failed to fetch".
       return handleMobileRequest(requestUrl, method, headers, body, signal)
     }
 

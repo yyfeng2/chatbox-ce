@@ -39,7 +39,7 @@ public class DocumentSaverPlugin extends Plugin {
         }
 
         try {
-            Context context = getContext().getContext();
+            Context context = getContext();
             ContentResolver resolver = context.getContentResolver();
             InputStream in = resolver.openInputStream(Uri.parse(sourceUri));
             if (in == null) {

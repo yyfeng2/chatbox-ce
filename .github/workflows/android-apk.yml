@@ -1,0 +1,73 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install dependencies
+        run: pnpm install --ignore-scripts
+
+      - name: Build web assets
+        run: CHATBOX_BUILD_TARGET=mobile_app CHATBOX_BUILD_PLATFORM=android npx electron-vite build
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Build debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Rename APK
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist/Chatbox-1.31.0-debug.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Chatbox-APK-debug
+          path: dist/Chatbox-1.31.0-debug.apk
+
+      # Release signing: add these repository secrets and uncomment to produce a
+      # signed release APK alongside the debug one.
+      #
+      # - name: Decode keystore
+      #   run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
+      #
+      # - name: Build signed release APK
+      #   env:
+      #     ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      #     ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      #   run: |
+      #     cd android
+      #     ./gradlew assembleRelease --no-daemon
+      #
+      # - name: Upload signed APK
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: Chatbox-APK-release
+      #     path: android/app/build/outputs/apk/release/*.apk

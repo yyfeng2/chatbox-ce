@@ -43,7 +43,8 @@ export default class MobilePlatform extends MobileSQLiteStorage implements Platf
 
   /**
    * 安卓物理返回键处理：注册后默认行为（直接退出 activity）被接管。
-   * 逐级回退（收起弹层/返回上一路由页），已在首页时 2 秒内连按两次退出。
+   * 优先收起 Mantine 弹层（Modal/Drawer/Menu/下拉），再逐级回退（返回上一
+   * 路由页），已在首页时 2 秒内连按两次退出。
    */
   private setupAndroidBackButton(): void {
     if (CHATBOX_BUILD_PLATFORM !== 'android') {
@@ -51,6 +52,13 @@ export default class MobilePlatform extends MobileSQLiteStorage implements Platf
     }
     let lastBackPress = 0
     App.addListener('backButton', () => {
+      // Mantine 弹层不走浏览器 history：合成一次 Escape 按键让最上层的弹层
+      // 自行关闭（Mantine 在 window 上注册 keydown 监听，capture 阶段触发）。
+      const overlay = document.querySelector('[role="dialog"], [role="menu"], [role="listbox"]')
+      if (overlay) {
+        overlay.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+        return
+      }
       if (window.history.length > 1 && window.location.pathname !== '/') {
         window.history.back()
         return
@@ -270,6 +278,10 @@ export default class MobilePlatform extends MobileSQLiteStorage implements Platf
 
   public async initTracking() {
     const GAID = 'G-B365F44W6E'
+    if (typeof window.gtag !== 'function') {
+      // gtag 脚本在 WebView 内可能未加载——埋点直接不可用，避免后续调用抛异常
+      return
+    }
     try {
       const conf = await this.getConfig()
       window.gtag('config', GAID, {
@@ -277,15 +289,14 @@ export default class MobilePlatform extends MobileSQLiteStorage implements Platf
         user_id: conf.uuid,
         client_id: conf.uuid,
         app_version: await this.getVersion(),
-        chatbox_platform_type: 'web',
+        chatbox_platform_type: 'mobile',
         chatbox_platform: await this.getPlatform(),
         app_platform: await this.getPlatform(),
       })
     } catch (e) {
-      window.gtag('config', GAID, {
-        app_name: 'chatbox',
-      })
-      throw e
+      // 调用方（ga_init）的同步 try/catch 接不到 async rejection，
+      // 在此记录日志，避免变成 unhandled rejection
+      console.error('Failed to init tracking:', e)
     }
   }
   public trackingEvent(name: string, params: { [key: string]: string }) {

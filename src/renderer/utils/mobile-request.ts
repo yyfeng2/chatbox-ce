@@ -110,6 +110,11 @@ export async function handleMobileRequest(
     headers: headerObj,
     data: body,
     responseType: 'text',
+    // Bounds hangs: without these the native HttpURLConnection waits forever
+    // (especially on connect), so retryRequest never gets a chance to retry.
+    // Read timeout is generous — non-streaming LLM generations can take minutes.
+    connectTimeout: 30000,
+    readTimeout: 600000,
   })
 
   const rawData = typeof response.data === 'string' ? response.data : JSON.stringify(response.data)

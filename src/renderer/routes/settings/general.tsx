@@ -417,22 +417,27 @@ export function RouteComponent() {
         </Stack>
       </Stack>
 
-      <Divider />
+      {/* Network Proxy (desktop only — the mobile request layer always bridges
+          through the native HTTP layer, so a proxy config has no effect) */}
+      {platform.type === 'desktop' && (
+        <>
+          <Divider />
 
-      {/* Network Proxy */}
-      <Stack gap="xs">
-        <Title order={5}>{t('Network Proxy')}</Title>
-        <TextInput
-          maw={320}
-          placeholder="socks5://127.0.0.1:6153"
-          value={settings.proxy}
-          onChange={(e) =>
-            setSettings({
-              proxy: e.currentTarget.value,
-            })
-          }
-        />
-      </Stack>
+          <Stack gap="xs">
+            <Title order={5}>{t('Network Proxy')}</Title>
+            <TextInput
+              maw={320}
+              placeholder="socks5://127.0.0.1:6153"
+              value={settings.proxy}
+              onChange={(e) =>
+                setSettings({
+                  proxy: e.currentTarget.value,
+                })
+              }
+            />
+          </Stack>
+        </>
+      )}
 
       <Divider />
 

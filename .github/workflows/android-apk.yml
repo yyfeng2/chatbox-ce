@@ -14,7 +14,9 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          # Reads the version from package.json packageManager; specifying one here
+          # conflicts ("Multiple versions of pnpm specified").
+          run_install: false
 
       - uses: actions/setup-node@v4
         with:

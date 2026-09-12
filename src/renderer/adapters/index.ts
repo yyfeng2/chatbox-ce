@@ -19,6 +19,7 @@ import { StorageKeyGenerator } from '@/storage/StoreStorage'
 import * as settingActions from '@/stores/settingActions'
 import { settingsStore } from '@/stores/settingsStore'
 import { apiRequest } from '@/utils/request'
+import { handleMobileRequest } from '@/utils/mobile-request'
 import { RendererSentryAdapter } from './sentry'
 
 interface ModelDependencyPlatformInfo {
@@ -101,7 +102,23 @@ function createRequestAdapter(
   platformInfo: ModelDependencyPlatformInfo,
   apiRequestClient: ApiRequestClient = apiRequest
 ): RequestAdapter {
-  const afetch = createAfetch(platformInfo)
+  const afetch = createAfetch({
+    ...platformInfo,
+    // Mobile WebView's https origin blocks cleartext http and CORS-blocked
+    // model endpoints (Failed to fetch) — bridge model requests through the
+    // native HTTP layer (CapacitorHttp / stream-http) instead.
+    fetchImpl:
+      platformInfo.type === 'mobile'
+        ? (url, init) =>
+            handleMobileRequest(
+              url.toString(),
+              init?.method ?? 'GET',
+              new Headers(init?.headers),
+              init?.body,
+              init?.signal
+            )
+        : undefined,
+  })
   return {
     fetchWithOptions: (
       url: string,

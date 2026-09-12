@@ -7,6 +7,13 @@ interface PlatformInfo {
   platform: string
   os: string
   version: string
+  /**
+   * Optional fetch implementation injected by the host platform. Mobile shells
+   * inject a native-bridge fetch (CapacitorHttp / stream-http) because the
+   * WebView's https origin blocks cleartext http and CORS-blocked model
+   * endpoints; desktop/web omit it and use the global fetch.
+   */
+  fetchImpl?: (url: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 }
 
 function getRequestOrigin(url: RequestInfo | URL): string {
@@ -113,7 +120,7 @@ export function createAfetch(platformInfo: PlatformInfo) {
             },
           }
         }
-        const res = await fetch(url, init)
+        const res = await (platformInfo.fetchImpl ?? fetch)(url, init)
         // 状态码不在 200～299 之间，一般是接口报错了，这里也需要抛错后重试
         if (!res.ok) {
           const response = await res.text().catch((e: unknown) => {

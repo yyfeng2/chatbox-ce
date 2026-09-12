@@ -56,7 +56,9 @@ import { reportError } from './utils/sentry'
 import('./setup/token_estimation_init')
 
 // 引入移动端安全区域代码，主要为了解决异形屏幕的问题
-if (CHATBOX_BUILD_TARGET === 'mobile_app' && CHATBOX_BUILD_PLATFORM === 'ios') {
+// Android 与 iOS 都需要：capacitor-plugin-safe-area 读取系统 WindowInsets
+// （状态栏/导航条/刘海）并设置 --mobile-safe-area-inset-* CSS 变量
+if (CHATBOX_BUILD_TARGET === 'mobile_app') {
   import('./setup/mobile_safe_area')
 }
 

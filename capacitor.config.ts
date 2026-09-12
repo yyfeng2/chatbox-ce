@@ -11,6 +11,12 @@ const config: CapacitorConfig = {
     // secure context (clipboard, service workers) work as on desktop.
     androidScheme: 'https',
   },
+  android: {
+    // Let Capacitor apply edge-to-edge margins automatically: Android 15 forces
+    // edge-to-edge, and without this the content is drawn under the status and
+    // navigation bars on devices that use gesture or cutout layouts.
+    adjustMarginsForEdgeToEdge: 'auto',
+  },
   plugins: {
     SplashScreen: {
       launchShowDuration: 1500,

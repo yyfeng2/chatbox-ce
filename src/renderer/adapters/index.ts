@@ -115,7 +115,7 @@ function createRequestAdapter(
               init?.method ?? 'GET',
               new Headers(init?.headers),
               init?.body,
-              init?.signal
+              init?.signal ?? undefined
             )
         : undefined,
   })

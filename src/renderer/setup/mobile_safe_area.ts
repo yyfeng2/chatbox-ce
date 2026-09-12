@@ -5,35 +5,62 @@
 
 import { SafeArea } from 'capacitor-plugin-safe-area'
 import { Keyboard } from '@capacitor/keyboard'
+import { CHATBOX_BUILD_PLATFORM } from '@/variables'
+
+const setInset = (key: string, value: number) => {
+  document.documentElement.style.setProperty(`--mobile-safe-area-inset-${key}`, `${value}px`)
+}
+
+const applyAllInsets = () => {
+  SafeArea.getSafeAreaInsets().then(({ insets }) => {
+    for (const [key, value] of Object.entries(insets)) {
+      setInset(key, value)
+    }
+  })
+}
 
 SafeArea.getSafeAreaInsets().then(({ insets }) => {
   for (const [key, value] of Object.entries(insets)) {
-    document.documentElement.style.setProperty(`--mobile-safe-area-inset-${key}`, `${value}px`)
+    setInset(key, value)
   }
 })
 
 SafeArea.getStatusBarHeight().then(({ statusBarHeight }) => {
   // console.log(statusBarHeight, 'statusbarHeight');
 })
+
 ;(async () => {
   // when safe-area changed
   const eventListener = await SafeArea.addListener('safeAreaChanged', (data) => {
     const { insets } = data
     for (const [key, value] of Object.entries(insets)) {
-      document.documentElement.style.setProperty(`--mobile-safe-area-inset-${key}`, `${value}px`)
+      setInset(key, value)
     }
   })
   // eventListener.remove();
 })()
 
+// Android 15 (targetSdk 35) forces edge-to-edge: the legacy
+// windowSoftInputMode=adjustResize no longer compresses the view, so the
+// keyboard would cover the input. Use the reported keyboard height as the
+// bottom inset to keep the composer above the keyboard. iOS keeps 0px (its
+// webview resizes automatically; a nonzero value would double-pad).
 Keyboard.addListener('keyboardWillShow', async (info) => {
+  if (CHATBOX_BUILD_PLATFORM === 'android' && info.keyboardHeight > 0) {
+    setInset('bottom', info.keyboardHeight)
+    return
+  }
   document.documentElement.style.setProperty(`--mobile-safe-area-inset-bottom`, `0px`)
 })
 
+// Some Android keyboards report height 0 on keyboardWillShow; keyboardDidShow
+// fires once the height is known and covers that case.
+Keyboard.addListener('keyboardDidShow', async (info) => {
+  if (CHATBOX_BUILD_PLATFORM === 'android' && info.keyboardHeight > 0) {
+    setInset('bottom', info.keyboardHeight)
+  }
+})
+
 Keyboard.addListener('keyboardWillHide', () => {
-  SafeArea.getSafeAreaInsets().then(({ insets }) => {
-    for (const [key, value] of Object.entries(insets)) {
-      document.documentElement.style.setProperty(`--mobile-safe-area-inset-${key}`, `${value}px`)
-    }
-  })
+  applyAllInsets()
 })

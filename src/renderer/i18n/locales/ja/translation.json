@@ -749,7 +749,6 @@
   "Please enter your email address": "メールアドレスを入力してください",
   "Please log in to Chatbox AI first": "先にChatbox AIにログインしてください",
   "Please select a model": "モデルを選択してください",
-  "Please test before saving": "保存前にテストしてください",
   "Popular": "人気",
   "Popular Skills": "人気のスキル",
   "Preparing": "準備中",
@@ -970,7 +969,6 @@
   "Temperature": "Temperature",
   "Terminal": "ターミナル",
   "Terms of Service": "利用規約",
-  "Test": "テスト",
   "Test Connection": "接続テスト",
   "Test failed": "テスト失敗",
   "Test Model": "モデルをテスト",
@@ -1282,5 +1280,15 @@
   "Long tasks pause for confirmation after every {{count}} steps so you can check they're on track. Individual chats can override this in their conversation settings.": "長時間のタスクは {{count}} ステップごとに一時停止して確認を求めるため、順調に進んでいるかチェックできます。チャットごとに会話設定で個別に上書きできます。",
   "{{count}} operation(s) awaiting approval": "{{count}}件の操作が承認待ち",
   "X-High": "極高",
-  "Max": "最大"
+  "Max": "最大",
+  "Protocol": "プロトコル",
+  "Auto (recommended)": "自動（推奨）",
+  "Legacy": "レガシー",
+  "If you're unsure, keep Auto. Choose Legacy only if you know the server does not support stateless MCP.": "不明な場合は「自動」のままにしてください。サーバーがステートレス MCP に対応していないことが分かっている場合のみ「レガシー」を選択してください。",
+  "Connect": "接続",
+  "Please connect before saving": "保存する前に接続してください",
+  "Authorization required. Open this server in MCP settings and click Connect to sign in.": "認証が必要です。MCP 設定でこのサーバーを開き、「接続」をクリックしてサインインしてください。",
+  "Screenshot": "スクリーンショット",
+  "Take Screenshot": "スクリーンショットを撮る",
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "画面の任意の領域をクリップボードにキャプチャします。どこでも Ctrl+Alt+X を押すこともできます。"
 }

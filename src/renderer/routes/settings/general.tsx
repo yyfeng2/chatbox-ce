@@ -30,7 +30,7 @@ import {
 import { type Language, Theme } from '@shared/types'
 import { formatFileSize } from '@shared/utils'
 import { getBackupFilename } from '@shared/utils/backup'
-import { IconCheck, IconDeviceFloppy, IconInfoCircle, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
+import { IconCamera, IconCheck, IconDeviceFloppy, IconInfoCircle, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -448,6 +448,11 @@ export function RouteComponent() {
 
       {/* Export Logs */}
       <ExportLogsSection />
+
+      <Divider />
+
+      {/* Screenshot */}
+      <ScreenshotSection />
 
       <Divider />
 
@@ -1039,6 +1044,28 @@ const ExportLogsSection = () => {
           <Text size="sm">{exportResult.error || t('Unknown error')}</Text>
         </Alert>
       )}
+    </Stack>
+  )
+}
+
+const ScreenshotSection = () => {
+  const { t } = useTranslation()
+
+  const handleCapture = () => {
+    void window.electronAPI.invoke('capture:start')
+  }
+
+  return (
+    <Stack gap="md">
+      <Stack gap="xxs">
+        <Title order={5}>{t('Screenshot')}</Title>
+        <Text c="chatbox-tertiary">
+          {t('Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.')}
+        </Text>
+      </Stack>
+      <Button className="self-start" leftSection={<IconCamera size={14} />} onClick={handleCapture}>
+        {t('Take Screenshot')}
+      </Button>
     </Stack>
   )
 }

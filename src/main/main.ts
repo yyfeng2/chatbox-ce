@@ -32,6 +32,7 @@ import { flushSentry, sentry } from './adapters/sentry'
 import * as analystic from './analystic-node'
 import { AppUpdater } from './app-updater'
 import * as autoLauncher from './autoLauncher'
+import { registerCaptureHandlers, startCapture } from './capture'
 import { handleDeepLink } from './deeplinks'
 import { parseFile } from './file-parser'
 import { isQuitForInstallRequested } from './installer-command'
@@ -271,6 +272,16 @@ function registerShortcuts(shortcutSetting?: ShortcutSetting) {
   } catch (error) {
     log.error('Failed to register shortcut [windowQuickToggle]:', error)
   }
+  try {
+    const screenshotShortcut = normalizeShortcut(shortcutSetting.screenshot)
+    if (isValidShortcut(screenshotShortcut)) {
+      globalShortcut.register(screenshotShortcut, () => {
+        void startCapture()
+      })
+    }
+  } catch (error) {
+    log.error('Failed to register shortcut [screenshot]:', error)
+  }
 }
 
 function unregisterShortcuts() {
@@ -297,6 +308,10 @@ function createTray() {
       label: locale.t('Show/Hide'),
       click: showOrHideWindow,
       accelerator: getSettings().shortcuts.quickToggle,
+    },
+    {
+      label: locale.t('Take Screenshot'),
+      click: () => void startCapture(),
     },
     {
       label: locale.t('Exit'),
@@ -1053,3 +1068,4 @@ ipcMain.handle('window:is-maximized', () => {
 registerSandboxHandlers()
 registerSkillsHandlers()
 registerOAuthHandlers()
+registerCaptureHandlers()

@@ -275,6 +275,7 @@ export const shortcutSendValues = [
 const ShortcutSendValueSchema = z.enum(shortcutSendValues as [string, ...string[]])
 
 export const shortcutToggleWindowValues = ['', 'Alt+`', 'Alt+Space', 'Ctrl+Alt+Space', 'Ctrl+Space']
+export const shortcutScreenshotValues = ['', 'Ctrl+Alt+X', 'Ctrl+Shift+S', 'Ctrl+Alt+S', 'Ctrl+Shift+A']
 const ShortcutToggleWindowValueSchema = z.enum(shortcutToggleWindowValues as [string, ...string[]])
 
 const newThreadShortcut = 'mod+shift+n'
@@ -316,6 +317,8 @@ const ShortcutSettingSchema = z.preprocess(
     optionSelect: z.string(),
     inputBoxSendMessage: ShortcutSendValueSchema,
     inputBoxSendMessageWithoutResponse: ShortcutSendValueSchema,
+    // Global screenshot capture; empty string disables the shortcut.
+    screenshot: z.string().default('Ctrl+Alt+X'),
   })
 )
 
@@ -370,12 +373,22 @@ const MCPServerConfigSchema = z.object({
   id: z.string(),
   name: z.string(),
   enabled: z.boolean(),
+  protocolMode: z.enum(['auto', 'legacy']).optional().catch(undefined),
   transport: MCPTransportConfigSchema,
+})
+
+// Per-server OAuth state written by the MCP client during the authorization flow.
+// Payload shapes are owned by @modelcontextprotocol/client, so they are stored opaquely.
+const MCPOAuthStateSchema = z.object({
+  clientInformation: z.record(z.string(), z.unknown()).optional(),
+  tokens: z.record(z.string(), z.unknown()).optional(),
+  codeVerifier: z.string().optional(),
 })
 
 const MCPSettingsSchema = z.object({
   servers: z.array(MCPServerConfigSchema),
   enabledBuiltinServers: z.array(z.string()),
+  oauth: z.record(z.string(), MCPOAuthStateSchema).optional().catch(undefined),
 })
 
 export enum Theme {
@@ -579,6 +592,7 @@ export type ShortcutSetting = z.infer<typeof ShortcutSettingSchema>
 export type ExtensionSettings = z.infer<typeof ExtensionSettingsSchema>
 export type MCPTransportConfig = z.infer<typeof MCPTransportConfigSchema>
 export type MCPServerConfig = z.infer<typeof MCPServerConfigSchema>
+export type MCPOAuthState = z.infer<typeof MCPOAuthStateSchema>
 export type MCPSettings = z.infer<typeof MCPSettingsSchema>
 
 // Re-export SkillSettings for convenience

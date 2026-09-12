@@ -494,6 +494,12 @@ export async function orchestrateGeneration(
   let firstTokenLatency: number | undefined
   const persistInterval = 2000
   let lastPersistTimestamp = Date.now()
+  // Per-chunk cache updates re-render the whole session page, so throttle them:
+  // fast streams can emit dozens of chunks per second and each skipped update
+  // only drops an invisible intermediate frame — the next chunk carries the
+  // newest content and the finalizing persist below is never throttled.
+  const streamingUiUpdateInterval = 80
+  let lastUiUpdateTimestamp = 0
 
   targetMsg = await initializeTargetMessage(targetMsg, settings, globalSettings, session.type)
 
@@ -788,11 +794,11 @@ export async function orchestrateGeneration(
         )
         if (shouldPersist) {
           void persistStreamingMessage(sessionId, targetMsg)
-        } else {
-          updateStreamingCache(sessionId, targetMsg)
-        }
-        if (shouldPersist) {
           lastPersistTimestamp = Date.now()
+          lastUiUpdateTimestamp = Date.now()
+        } else if (Date.now() - lastUiUpdateTimestamp >= streamingUiUpdateInterval) {
+          updateStreamingCache(sessionId, targetMsg)
+          lastUiUpdateTimestamp = Date.now()
         }
       }
     } finally {

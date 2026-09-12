@@ -749,7 +749,6 @@
   "Please enter your email address": "Пожалуйста, введите ваш адрес электронной почты",
   "Please log in to Chatbox AI first": "Пожалуйста, сначала войдите в Chatbox AI",
   "Please select a model": "Пожалуйста, выберите модель",
-  "Please test before saving": "Пожалуйста, протестируйте перед сохранением",
   "Popular": "Популярные",
   "Popular Skills": "Популярные навыки",
   "Preparing": "Подготовка",
@@ -970,7 +969,6 @@
   "Temperature": "Температура",
   "Terminal": "Терминал",
   "Terms of Service": "Условиями предоставления услуг",
-  "Test": "Тест",
   "Test Connection": "Проверить подключение",
   "Test failed": "Тест не пройден",
   "Test Model": "Проверить модель",
@@ -1282,5 +1280,15 @@
   "Long tasks pause for confirmation after every {{count}} steps so you can check they're on track. Individual chats can override this in their conversation settings.": "Длинные задачи приостанавливаются каждые {{count}} шагов для подтверждения, чтобы вы могли убедиться, что всё идёт по плану. Для отдельных чатов это можно переопределить в настройках беседы.",
   "{{count}} operation(s) awaiting approval": "{{count}} операция(и/й) ожидает одобрения",
   "X-High": "Очень высокий",
-  "Max": "Максимум"
+  "Max": "Максимум",
+  "Protocol": "Протокол",
+  "Auto (recommended)": "Авто (рекомендуется)",
+  "Legacy": "Устаревший",
+  "If you're unsure, keep Auto. Choose Legacy only if you know the server does not support stateless MCP.": "Если не уверены, оставьте Авто. Выбирайте Устаревший, только если знаете, что сервер не поддерживает MCP без состояния.",
+  "Connect": "Подключиться",
+  "Please connect before saving": "Подключитесь перед сохранением",
+  "Authorization required. Open this server in MCP settings and click Connect to sign in.": "Требуется авторизация. Откройте этот сервер в настройках MCP и нажмите Подключиться, чтобы войти.",
+  "Screenshot": "Скриншот",
+  "Take Screenshot": "Сделать скриншот",
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "Сделайте снимок любой области экрана в буфер обмена. Вы также можете нажать Ctrl+Alt+X в любом месте."
 }

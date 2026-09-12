@@ -29,6 +29,8 @@ import { StorageKeyGenerator } from '@/storage/StoreStorage'
 import * as defaults from '../../shared/defaults'
 import { getLogger } from '../lib/utils'
 import { migrateSession } from '../utils/session-utils'
+import { computationQueue } from '@/packages/token-estimation/computation-queue'
+import { getGenerationControlMessages } from './session/generation-state'
 import { uiStore } from './uiStore'
 
 const log = getLogger('chat-store')
@@ -392,7 +394,20 @@ async function cleanupSessionAttachmentRagEntries(ids: string[], operation: stri
   })
 }
 
+function cancelSessionGenerationBeforeDeletion(id: string) {
+  // Abort any in-flight generation for the deleted session so the stream loop
+  // stops consuming tokens/CPU instead of spinning until the stream ends.
+  const session = queryClient.getQueryData<Session>(QueryKeys.ChatSession(id))
+  if (session) {
+    for (const message of getGenerationControlMessages(session)) {
+      message.cancel?.()
+    }
+  }
+  computationQueue.cancelBySession(id)
+}
+
 function cleanupDeletedSessionRuntimeState(id: string) {
+  cancelSessionGenerationBeforeDeletion(id)
   _setSessionCache(id, null)
   uiStore.getState().clearSessionWebBrowsing(id)
   uiStore.getState().removeSessionKnowledgeBase(id)

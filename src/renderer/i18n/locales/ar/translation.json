@@ -749,7 +749,6 @@
   "Please enter your email address": "يرجى إدخال عنوان بريدك الإلكتروني",
   "Please log in to Chatbox AI first": "يرجى تسجيل الدخول إلى Chatbox AI أولاً",
   "Please select a model": "يرجى اختيار نموذج",
-  "Please test before saving": "يرجى الاختبار قبل الحفظ",
   "Popular": "شائع",
   "Popular Skills": "المهارات الشائعة",
   "Preparing": "جاري التحضير",
@@ -970,7 +969,6 @@
   "Temperature": "درجة الحرارة (Temperature)",
   "Terminal": "Terminal",
   "Terms of Service": "شروط الخدمة",
-  "Test": "اختبار",
   "Test Connection": "اختبار الاتصال",
   "Test failed": "فشل الاختبار",
   "Test Model": "اختبار النموذج",
@@ -1282,5 +1280,15 @@
   "Long tasks pause for confirmation after every {{count}} steps so you can check they're on track. Individual chats can override this in their conversation settings.": "تتوقف المهام الطويلة مؤقتًا كل {{count}} خطوة للتأكيد، حتى تتحقق من أنها تسير على المسار الصحيح. يمكن لكل محادثة تجاوز هذا الخيار من إعدادات المحادثة الخاصة بها.",
   "{{count}} operation(s) awaiting approval": "{{count}} عملية (عمليات) بانتظار الموافقة",
   "X-High": "عالٍ جداً",
-  "Max": "الحد الأقصى"
+  "Max": "الحد الأقصى",
+  "Protocol": "البروتوكول",
+  "Auto (recommended)": "تلقائي (موصى به)",
+  "Legacy": "قديم",
+  "If you're unsure, keep Auto. Choose Legacy only if you know the server does not support stateless MCP.": "إذا لم تكن متأكداً، ابقَ على تلقائي. اختر قديم فقط إذا كنت تعلم أن الخادم لا يدعم MCP عديم الحالة.",
+  "Connect": "اتصال",
+  "Please connect before saving": "يرجى الاتصال قبل الحفظ",
+  "Authorization required. Open this server in MCP settings and click Connect to sign in.": "مطلوب التفويض. افتح هذا الخادم في إعدادات MCP وانقر على اتصال لتسجيل الدخول.",
+  "Screenshot": "لقطة شاشة",
+  "Take Screenshot": "التقاط لقطة شاشة",
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "التقاط أي منطقة من الشاشة إلى الحافظة. يمكنك أيضاً الضغط على Ctrl+Alt+X في أي مكان."
 }

@@ -56,6 +56,10 @@ nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   include: assets/installer.nsh
+  # Data removal is implemented by the customUnInstall hook in installer.nsh:
+  # the uninstaller asks whether to delete app data (%APPDATA%\xyz.chatboxapp.ce)
+  # and leftover directories from previous Chatbox installations, instead of
+  # electron-builder's built-in deleteAppDataOnUninstall which deletes without asking.
 
 linux:
   target:

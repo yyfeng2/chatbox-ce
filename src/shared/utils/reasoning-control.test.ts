@@ -113,16 +113,12 @@ describe('reasoning-control', () => {
   it('adapts selectable levels to the model thinking format', () => {
     expect(getReasoningControlOptions(ModelProviderEnum.DeepSeek, model('deepseek-reasoner'))).toEqual([
       { level: 'default', label: 'default' },
-      { level: 'off', label: 'off' },
       { level: 'high', label: 'on' },
     ])
     expect(getReasoningControlOptions(ModelProviderEnum.OpenAIResponses, model('gpt-5.5'))).toEqual([
       { level: 'default', label: 'default' },
-      { level: 'off', label: 'off' },
       { level: 'low', label: 'low' },
-      { level: 'medium', label: 'medium' },
       { level: 'high', label: 'high' },
-      { level: 'xhigh', label: 'xhigh' },
       { level: 'max', label: 'max' },
     ])
   })
@@ -136,41 +132,37 @@ describe('reasoning-control', () => {
       { level: 'high', label: 'high' },
     ])
     // Claude effort/adaptive models are controlled via the effort param only; an explicit
-    // thinking disable never reaches the wire, so no off option is offered. They expose the
-    // full effort scale (low/medium/high/xhigh/max).
+    // thinking disable never reaches the wire, so no off option is offered. They expose
+    // the three-tier effort scale (low/high/max).
     expect(getReasoningControlOptions(ModelProviderEnum.Claude, model('claude-opus-4-5'))).toEqual([
       { level: 'default', label: 'default' },
       { level: 'low', label: 'low' },
-      { level: 'medium', label: 'medium' },
       { level: 'high', label: 'high' },
-      { level: 'xhigh', label: 'xhigh' },
       { level: 'max', label: 'max' },
     ])
     expect(getReasoningControlOptions(ModelProviderEnum.Claude, model('claude-opus-4-8'))).toEqual([
       { level: 'default', label: 'default' },
       { level: 'low', label: 'low' },
-      { level: 'medium', label: 'medium' },
       { level: 'high', label: 'high' },
-      { level: 'xhigh', label: 'xhigh' },
       { level: 'max', label: 'max' },
     ])
     expect(getReasoningControlOptions(ModelProviderEnum.Claude, model('claude-opus-5'))).toEqual([
       { level: 'default', label: 'default' },
       { level: 'low', label: 'low' },
-      { level: 'medium', label: 'medium' },
       { level: 'high', label: 'high' },
-      { level: 'xhigh', label: 'xhigh' },
       { level: 'max', label: 'max' },
     ])
-    // Budget-style Claude and Gemini Flash keep their explicit off.
-    expect(getReasoningControlOptions(ModelProviderEnum.Claude, model('claude-sonnet-4-6'))[1]).toEqual({
-      level: 'off',
-      label: 'off',
-    })
-    expect(getReasoningControlOptions(ModelProviderEnum.Gemini, model('gemini-2.5-flash'))[1]).toEqual({
-      level: 'off',
-      label: 'off',
-    })
+    // The off option is no longer offered in the menu for any family, including
+    // budget-style Claude and Gemini Flash.
+    expect(getReasoningControlOptions(ModelProviderEnum.Claude, model('claude-sonnet-4-6')).map((o) => o.level)).toEqual(
+      ['default', 'low', 'medium', 'high']
+    )
+    expect(getReasoningControlOptions(ModelProviderEnum.Gemini, model('gemini-2.5-flash')).map((o) => o.level)).toEqual([
+      'default',
+      'low',
+      'medium',
+      'high',
+    ])
     // Registry id variants and proxied google apiStyle must also lose the off option.
     for (const id of ['gemini-2.5-pro-preview-06-05', 'models/gemini-2.5-pro']) {
       const levels = getReasoningControlOptions(ModelProviderEnum.Gemini, model(id)).map((o) => o.level)
@@ -265,13 +257,11 @@ describe('reasoning-control', () => {
       kind: 'toggle',
     })
     expect(getReasoningControlCapabilities(ModelProviderEnum.OpenAI, model('o1-mini')).supported).toBe(false)
-    // o-series only accepts low/medium/high/xhigh/max — no minimal/none, so no off option.
+    // o-series only accepts low/high/max — no minimal/none, so no off option.
     expect(getReasoningControlOptions(ModelProviderEnum.OpenAI, model('o3')).map((o) => o.level)).toEqual([
       'default',
       'low',
-      'medium',
       'high',
-      'xhigh',
       'max',
     ])
     // ChatboxAI / custom providers route o-series by API style.
@@ -298,9 +288,9 @@ describe('reasoning-control', () => {
     ).toBe('default')
     // gpt-4o must not be classified as an o-series reasoning model.
     expect(getReasoningControlCapabilities(ModelProviderEnum.OpenAI, model('gpt-4o')).supported).toBe(false)
-    // OpenRouter keeps its off state for o-series (reasoning.enabled=false works there),
-    // and o1-preview stays reasoning-capable there (OpenRouter maps params per model).
-    expect(getReasoningControlOptions(ModelProviderEnum.OpenRouter, model('openai/o3')).map((o) => o.level)).toContain(
+    // The off option is gone from every menu; o1-preview stays reasoning-capable
+    // on OpenRouter (OpenRouter maps params per model).
+    expect(getReasoningControlOptions(ModelProviderEnum.OpenRouter, model('openai/o3')).map((o) => o.level)).not.toContain(
       'off'
     )
     expect(getReasoningControlCapabilities(ModelProviderEnum.OpenRouter, model('openai/o1-preview')).supported).toBe(
@@ -455,11 +445,8 @@ describe('reasoning-control', () => {
     })
     expect(getReasoningControlOptions(ModelProviderEnum.DeepSeek, v4)).toEqual([
       { level: 'default', label: 'default' },
-      { level: 'off', label: 'off' },
       { level: 'low', label: 'low' },
-      { level: 'medium', label: 'medium' },
       { level: 'high', label: 'high' },
-      { level: 'xhigh', label: 'xhigh' },
       { level: 'max', label: 'max' },
     ])
     expect(options?.deepseek).toEqual({ thinking: { type: 'enabled' } })

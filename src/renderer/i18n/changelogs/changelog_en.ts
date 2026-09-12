@@ -1,4 +1,10 @@
 const changelog = `
+## v1.31.0 - 2026.09.12
+1. Upgraded MCP to the 2026-07-28 protocol with OAuth support for remote servers and a live tool list in settings
+2. Reasoning effort now offers three tiers (low/high/max) with the off tier removed
+3. Added a universal screenshot feature to capture any screen region to the clipboard
+4. Fixed multiple memory leaks and reduced memory usage
+
 ## v1.30.0 - 2026.08.26
 1. Replaced chat archiving with direct deletion; deleted chats cannot be restored, so please proceed with care
 2. Removed the Chatbox AI backend dependency; model providers are now fully customizable

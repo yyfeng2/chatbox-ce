@@ -29,6 +29,8 @@
 
 **唯一例外：自定义（custom）供应商的 chat/task 模型不做任何 id 判定，一律开放思考控制。** 自定义供应商代理的是用户自建的端点（vLLM / Ollama / SiliconFlow / 各类网关），其模型 id 无法用内置正则分类；而 OpenAI 兼容端点统一接受 `reasoning_effort` 档位（`none / minimal / low / medium / high / xhigh / max`），与模型是否为「推理模型」无关。因此对自定义供应商直接按 API 风格（effectiveProvider）给出控件与 wire 格式，不需要模型勾选 `reasoning` 能力标志。非 chat 类型（image / embedding / rerank）保持无控件。
 
+**UI 档位收窄（CE 定制）**：当前大多数模型只支持三个强度级别 `low / high / max`，`getReasoningControlOptions` 对 effort 家族（`openai-effort` / `anthropic-effort` / `anthropic-adaptive-effort` / `deepseek-effort`）只提供 `default + low/high/max`（不再提供 `off` / `medium` / `xhigh` 菜单项）；budget/level 家族（Gemini / Qwen）保持原生 low/medium/high 刻度，简单开关为 default/on。**off 档已从所有菜单移除**（wire 层与 `ReasoningControlLevel` 类型保留完整枚举：旧版本写入的 off 值仍正确走关闭 wire 并原样回显）。
+
 > **注意**：自定义供应商上模型 id 与 API 风格即使「不匹配」（例如 Claude/Grok/Qwen 名字的模型挂在 openai 风格上）也不禁用——判定直接命中自定义分支，禁用（disabledReason）逻辑对其不生效，wire 以实际配置的 API 风格为准。这是有意为之：用户给自定义供应商配了什么端点，就该按什么协议发。
 
 ```ts
@@ -82,17 +84,17 @@ getReasoningControlCapabilities(provider, model): {
 |-------------------|--------------|------|---------|
 | Claude | `claude-opus-4-(7\|8)`、`claude-opus-5` | `anthropic-adaptive-effort` | low/medium/high（adaptive effort） |
 | Claude | `claude-opus-4-5` | `anthropic-effort` | low/medium/high（effort） |
-| Claude | `claude-3-7-sonnet`、`claude-sonnet-4`、`claude-haiku-4-5`、`claude-opus-4`(非 4.5/4.7/4.8) | `budget` | off + low/medium/high（thinking budget） |
+| Claude | `claude-3-7-sonnet`、`claude-sonnet-4`、`claude-haiku-4-5`、`claude-opus-4`(非 4.5/4.7/4.8) | `budget` | low/medium/high（thinking budget） |
 | Gemini | `getGoogleThinkingMode()` 为 `budget` | `budget` | thinkingBudget |
 | Gemini | `getGoogleThinkingMode()` 为 `level` | `level` | thinkingLevel |
-| DeepSeek / OpenAI-compatible 的 DeepSeek V4 | `isDeepSeekReasoningEffortModel()` | `deepseek-effort` | off + low/medium/high |
-| DeepSeek V4 之前的思考模型 | `isDeepSeekReasoningModel()` 且非 V4 | `toggle` | off + on |
-| ChatboxAI 的 DeepSeek V4 | `isDeepSeekReasoningEffortModel()` + 服务端返回的 `apiStyle`（OpenAI Chat / Anthropic / Responses） | `deepseek-effort` | off + low/medium/high，按 API 风格映射官方参数 |
-| ChatboxAI 的 V4 之前 DeepSeek 思考模型 | `isDeepSeekReasoningModel()` 且非 V4；OpenAI Chat / Anthropic | `toggle` | off + on |
-| OpenAI 系（OpenAI / OpenAIResponses / Azure） | `gpt-5*`、`gpt-oss*`（`GPT_EFFORT_MODELS`） | `openai-effort` | off + low/medium/high |
-| Qwen / QwenPortal | `qwen3*`（`QWEN_THINKING_MODELS`） | `budget` | off + low/medium/high |
-| XAI | `grok-4*`（`GROK_REASONING_EFFORT_MODELS`） | `xai-effort` | off + low/medium/high |
-| OpenRouter | `isOpenRouterReasoningModel()`（聚合上述 Claude/GPT/Qwen/Grok/DeepSeek/o 系列） | `openrouter-reasoning` | off + low/medium/high |
+| DeepSeek / OpenAI-compatible 的 DeepSeek V4 | `isDeepSeekReasoningEffortModel()` | `deepseek-effort` | low/medium/high |
+| DeepSeek V4 之前的思考模型 | `isDeepSeekReasoningModel()` 且非 V4 | `toggle` | on |
+| ChatboxAI 的 DeepSeek V4 | `isDeepSeekReasoningEffortModel()` + 服务端返回的 `apiStyle`（OpenAI Chat / Anthropic / Responses） | `deepseek-effort` | low/medium/high，按 API 风格映射官方参数 |
+| ChatboxAI 的 V4 之前 DeepSeek 思考模型 | `isDeepSeekReasoningModel()` 且非 V4；OpenAI Chat / Anthropic | `toggle` | on |
+| OpenAI 系（OpenAI / OpenAIResponses / Azure） | `gpt-5*`、`gpt-oss*`（`GPT_EFFORT_MODELS`） | `openai-effort` | low/medium/high |
+| Qwen / QwenPortal | `qwen3*`（`QWEN_THINKING_MODELS`） | `budget` | low/medium/high |
+| XAI | `grok-4*`（`GROK_REASONING_EFFORT_MODELS`） | `xai-effort` | low/medium/high |
+| OpenRouter | `isOpenRouterReasoningModel()`（聚合上述 Claude/GPT/Qwen/Grok/DeepSeek/o 系列） | `openrouter-reasoning` | low/medium/high |
 
 不匹配任何一项 → `DEFAULT_CAPABILITIES`（`supported: false`），控件隐藏、请求侧剥离参数。
 
@@ -117,13 +119,13 @@ DeepSeek 官方参数映射如下。**强度参数仅适用于 V4 模型**；更
 | Anthropic | `thinking: { type: 'disabled' }` | `thinking: { type: 'enabled' }` + `output_config.effort` |
 | Responses | `reasoning: { effort: 'none' }` | `reasoning: { effort }` |
 
-官方强度为 `low / high / max`，同时为兼容其他 Provider 接受 `xhigh`。产品 UI 维持统一的低/中/高三档，映射为：
+官方强度为 `low / high / max`，同时为兼容其他 Provider 接受 `xhigh`。产品 UI 对 effort 家族（OpenAI / Claude / DeepSeek）提供统一的三档 low/high/max，与官方强度一一对应；旧版本写入的 `medium`/`xhigh` 值仍可读回并继续生效，用户改选时会写入新档位：
 
 | UI 档位 | DeepSeek 官方强度 |
 |---------|------------------|
 | low | `low` |
-| medium | `high` |
-| high | `max` |
+| high | `high` |
+| max | `max` |
 
 需要注意，官方当前还会按具体模型进一步映射请求强度：`deepseek-v4-flash` 将 `xhigh` 映射为 `high`；`deepseek-v4-pro` 当前将 `low/high` 映射为 `high`、将 `xhigh/max` 映射为 `max`（官方注明计划在 2026 年 8 月上旬更新 V4 Pro 映射）。客户端仍发送明确的 `low/high/max` 意图，最终实际强度以服务端当时的模型映射为准。
 
@@ -138,6 +140,8 @@ ChatboxAI 必须以模型目录中服务端返回的 `apiStyle` 为准，不能�
 ## 4. providerOptions 生成（off 的特殊处理）
 
 `getReasoningProviderOptions(provider, model, level, previous)`：
+
+> **off 档已从所有菜单移除（CE 定制）**，但本节的 wire 处理完整保留：旧版本写入的 off 值读回后原样回显并继续走关闭 wire，直到用户改选。
 
 - **若 `!supported`：原样返回 `previous`**（不新增也不清理；清理由请求侧兜底，见 §6）。
 - 按 effectiveProvider 写入对应命名空间（`claude` / `openai` / `google` / `deepseek` / `openaiCompatible` / `openrouter`）。

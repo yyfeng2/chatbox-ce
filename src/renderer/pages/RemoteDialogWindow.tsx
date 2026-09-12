@@ -37,7 +37,9 @@ export default function RemoteDialogWindow() {
   }
   useEffect(() => {
     checkRemoteDialog()
-    setInterval(checkRemoteDialog, 1000 * 60 * 60 * 24) // 对于常年不关机的用户，也要每天检查一次
+    // 对于常年不关机的用户，也要每天检查一次。组件卸载时清理，避免重复挂载累积定时器。
+    const interval = setInterval(checkRemoteDialog, 1000 * 60 * 60 * 24)
+    return () => clearInterval(interval)
   }, [])
   // 打点上报
   useEffect(() => {

@@ -749,7 +749,6 @@
   "Please enter your email address": "请输入您的邮箱地址",
   "Please log in to Chatbox AI first": "请先登录 Chatbox AI",
   "Please select a model": "请选择模型",
-  "Please test before saving": "保存前请测试",
   "Popular": "热门",
   "Popular Skills": "热门技能",
   "Preparing": "正在准备",
@@ -970,7 +969,6 @@
   "Temperature": "温度",
   "Terminal": "终端",
   "Terms of Service": "服务条款",
-  "Test": "测试",
   "Test Connection": "测试连接",
   "Test failed": "测试失败",
   "Test Model": "测试模型",
@@ -1282,5 +1280,15 @@
   "Long tasks pause for confirmation after every {{count}} steps so you can check they're on track. Individual chats can override this in their conversation settings.": "长任务每执行 {{count}} 步会暂停等待确认，方便你检查任务是否在正轨上。各对话可在其对话设置中单独覆盖此设置。",
   "{{count}} operation(s) awaiting approval": "{{count}} 个操作等待批准",
   "X-High": "极高",
-  "Max": "最高"
+  "Max": "最高",
+  "Protocol": "协议",
+  "Auto (recommended)": "自动（推荐）",
+  "Legacy": "旧版",
+  "If you're unsure, keep Auto. Choose Legacy only if you know the server does not support stateless MCP.": "如果不确定，请保持「自动」。仅当您知道服务器不支持无状态 MCP 时才选择「旧版」。",
+  "Connect": "连接",
+  "Please connect before saving": "保存前请先连接",
+  "Authorization required. Open this server in MCP settings and click Connect to sign in.": "需要授权。请在 MCP 设置中打开此服务器并点击「连接」以登录。",
+  "Screenshot": "截图",
+  "Take Screenshot": "开始截图",
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "截取任意屏幕区域到剪贴板，也可以随时按 Ctrl+Alt+X。"
 }

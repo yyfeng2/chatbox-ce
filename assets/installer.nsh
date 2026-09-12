@@ -1,9 +1,71 @@
 !include LogicLib.nsh
+!include FileFunc.nsh
 
 ; electron-builder's default close request sends WM_CLOSE on some Windows
 ; installations. Chatbox remains alive after its last window closes because it
 ; owns a tray icon, so ask the running instance to quit explicitly first.
 Var /GLOBAL pid
+
+!macro customUnInstall
+  ; Ask whether to remove data. electron-builder's built-in deleteAppDataOnUninstall
+  ; deletes without asking, so this macro implements the choice itself:
+  ;   - uninstallers run with --delete-app-data remove data unconditionally (silent runs)
+  ;   - interactive uninstallers show a localized Yes/No question, defaulting to keep
+  ; The data dirs are %APPDATA%\Chatbox (leftover from previous official installs)
+  ; and %APPDATA%\xyz.chatboxapp.ce (this app's config, session storage, blobs,
+  ; IndexedDB, localStorage and logs). RMDir /r silently succeeds on missing dirs.
+  ClearErrors
+  ${GetParameters} $R0
+  ${GetOptions} $R0 "--delete-app-data" $R1
+  ${If} ${Errors}
+    ${If} ${Silent}
+      ; Silent uninstall keeps data by default (conservative).
+      Goto skipAppDataRemoval
+    ${EndIf}
+    ; Localized delete question matched against the uninstaller language ($LANGUAGE,
+    ; initialized by the MUI2 language pages). Unlisted languages fall back to English.
+    ${If} $LANGUAGE = 2052
+      MessageBox MB_YESNO|MB_ICONQUESTION "是否删除全部应用数据与遗留文件？$\r$\n$\r$\n选择「是」将删除设置、聊天记录与缓存文件；选择「否」将保留，以便将来重新安装。" /SD IDNO IDYES removeAppData
+    ${ElseIf} $LANGUAGE = 1028
+      MessageBox MB_YESNO|MB_ICONQUESTION "是否刪除全部應用程式資料與遺留檔案？$\r$\n$\r$\n選擇「是」將刪除設定、聊天記錄與快取檔案；選擇「否」將保留，以便將來重新安裝。" /SD IDNO IDYES removeAppData
+    ${ElseIf} $LANGUAGE = 1041
+      MessageBox MB_YESNO|MB_ICONQUESTION "すべてのアプリケーションデータと残りのファイルを削除しますか？$\r$\n$\r$\n「はい」を選択すると設定・チャット・キャッシュファイルを削除します。「いいえ」を選択すると将来の再インストールのために保持します。" /SD IDNO IDYES removeAppData
+    ${ElseIf} $LANGUAGE = 1042
+      MessageBox MB_YESNO|MB_ICONQUESTION "모든 애플리케이션 데이터와 남은 파일을 삭제하시겠습니까?$\r$\n$\r$\n예를 선택하면 설정, 채팅 및 캐시 파일이 삭제됩니다. 아니요를 선택하면 다시 설치할 때를 위해 유지됩니다." /SD IDNO IDYES removeAppData
+    ${ElseIf} $LANGUAGE = 1031
+      MessageBox MB_YESNO|MB_ICONQUESTION "Alle Anwendungsdaten und zurückgebliebenen Dateien löschen?$\r$\n$\r$\nWählen Sie Ja, um Einstellungen, Chats und Cache-Dateien zu entfernen. Wählen Sie Nein, um sie für eine spätere Neuinstallation zu behalten." /SD IDNO IDYES removeAppData
+    ${ElseIf} $LANGUAGE = 1036
+      MessageBox MB_YESNO|MB_ICONQUESTION "Supprimer toutes les données de l'application et les fichiers restants ?$\r$\n$\r$\nChoisissez Oui pour supprimer les paramètres, les conversations et les fichiers en cache. Choisissez Non pour les conserver en vue d'une réinstallation." /SD IDNO IDYES removeAppData
+    ${ElseIf} $LANGUAGE = 1034
+      MessageBox MB_YESNO|MB_ICONQUESTION "¿Desea eliminar todos los datos de la aplicación y los archivos restantes?$\r$\n$\r$\nElija Sí para eliminar configuración, chats y archivos en caché. Elija No para conservarlos para una futura reinstalación." /SD IDNO IDYES removeAppData
+    ${ElseIf} $LANGUAGE = 1040
+      MessageBox MB_YESNO|MB_ICONQUESTION "Eliminare tutti i dati dell'applicazione e i file rimanenti?$\r$\n$\r$\nScegli Sì per rimuovere impostazioni, chat e file nella cache. Scegli No per conservarli per una futura reinstallazione." /SD IDNO IDYES removeAppData
+    ${ElseIf} $LANGUAGE = 1049
+      MessageBox MB_YESNO|MB_ICONQUESTION "Удалить все данные приложения и оставшиеся файлы?$\r$\n$\r$\nВыберите Да, чтобы удалить настройки, чаты и кэшированные файлы. Выберите Нет, чтобы сохранить их для будущей переустановки." /SD IDNO IDYES removeAppData
+    ${ElseIf} $LANGUAGE = 2070
+      MessageBox MB_YESNO|MB_ICONQUESTION "Eliminar todos os dados da aplicação e ficheiros restantes?$\r$\n$\r$\nEscolha Sim para remover definições, conversas e ficheiros em cache. Escolha Não para mantê-los para uma futura reinstalação." /SD IDNO IDYES removeAppData
+    ${ElseIf} $LANGUAGE = 1046
+      MessageBox MB_YESNO|MB_ICONQUESTION "Excluir todos os dados do aplicativo e arquivos restantes?$\r$\n$\r$\nEscolha Sim para remover configurações, conversas e arquivos em cache. Escolha Não para mantê-los para uma futura reinstalação." /SD IDNO IDYES removeAppData
+    ${ElseIf} $LANGUAGE = 1025
+      MessageBox MB_YESNO|MB_ICONQUESTION "هل تريد حذف جميع بيانات التطبيق والملفات المتبقية؟$\r$\n$\r$\nاختر نعم لإزالة الإعدادات والمحادثات والملفات المخزنة مؤقتاً. اختر لا للاحتفاظ بها لإعادة التثبيت في المستقبل." /SD IDNO IDYES removeAppData
+    ${ElseIf} $LANGUAGE = 1053
+      MessageBox MB_YESNO|MB_ICONQUESTION "Vill du ta bort all programdata och kvarvarande filer?$\r$\n$\r$\nVälj Ja för att ta bort inställningar, chattar och cachade filer. Välj Nej för att behålla dem för en framtida ominstallation." /SD IDNO IDYES removeAppData
+    ${ElseIf} $LANGUAGE = 2068
+      MessageBox MB_YESNO|MB_ICONQUESTION "Vil du slette all programdata og gjenværende filer?$\r$\n$\r$\nVelg Ja for å fjerne innstillinger, chatter og hurtigbufferfiler. Velg Nei for å beholde dem for en fremtidig installasjon på nytt." /SD IDNO IDYES removeAppData
+    ${Else}
+      MessageBox MB_YESNO|MB_ICONQUESTION "Do you want to delete all application data and leftover files?$\r$\n$\r$\nChoose Yes to remove settings, chats and cached files. Choose No to keep them for a future reinstall." /SD IDNO IDYES removeAppData
+    ${EndIf}
+    Goto skipAppDataRemoval
+  ${EndIf}
+
+  removeAppData:
+    DetailPrint "Removing application data and leftovers"
+    RMDir /r "$APPDATA\Chatbox"
+    RMDir /r "$APPDATA\xyz.chatboxapp.ce"
+    RMDir /r "$APPDATA\chatbox"
+
+  skipAppDataRemoval:
+!macroend
 
 !macro customCheckAppRunning
   !insertmacro IS_POWERSHELL_AVAILABLE

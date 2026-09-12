@@ -663,38 +663,38 @@ export function getReasoningControlOptions(
   const capabilities = getReasoningControlCapabilities(provider, model)
   if (!capabilities.supported) return []
 
-  const offOption: ReasoningControlOption[] = supportsExplicitDisable(
-    capabilities.kind,
-    getEffectiveProvider(provider, model),
-    model?.modelId || ''
-  )
-    ? [{ level: 'off', label: 'off' }]
-    : []
-
   if (capabilities.kind === 'toggle') {
-    return [{ level: 'default', label: 'default' }, ...offOption, { level: 'high', label: 'on' }]
+    return [
+      { level: 'default', label: 'default' },
+      { level: 'high', label: 'on' },
+    ]
   }
 
   // Base strength gears shared by every effort/budget/level family.
   const gears: ReasoningControlOption[] = [
     { level: 'default', label: 'default' },
-    ...offOption,
     { level: 'low', label: 'low' },
     { level: 'medium', label: 'medium' },
     { level: 'high', label: 'high' },
   ]
 
-  // xhigh and max are the two tiers above high. They belong to every
-  // effort-controlled family (OpenAI, Claude and DeepSeek all expose the full
-  // reasoning_effort scale low/medium/high/xhigh/max); budget/level families
-  // (Gemini, Qwen) and simple toggles top out at high.
+  // Most effort-controlled models (OpenAI, Claude, DeepSeek) expose a three-tier
+  // scale today: low/high/max. Drop medium from the menu and append max; stale
+  // persisted medium/xhigh values still round-trip through the wire. Budget/level
+  // families (Gemini, Qwen) keep their native low/medium/high scale and simple
+  // toggles top out at high.
   if (
     capabilities.kind === 'openai-effort' ||
     capabilities.kind === 'anthropic-effort' ||
     capabilities.kind === 'anthropic-adaptive-effort' ||
     capabilities.kind === 'deepseek-effort'
   ) {
-    gears.push({ level: 'xhigh', label: 'xhigh' }, { level: 'max', label: 'max' })
+    return [
+      { level: 'default', label: 'default' },
+      { level: 'low', label: 'low' },
+      { level: 'high', label: 'high' },
+      { level: 'max', label: 'max' },
+    ]
   }
 
   return gears

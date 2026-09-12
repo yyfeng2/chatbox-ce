@@ -3,6 +3,7 @@ import {
   type Settings,
   type ShortcutName,
   type ShortcutSetting,
+  shortcutScreenshotValues,
   shortcutSendValues,
   shortcutToggleWindowValues,
 } from '@shared/types'
@@ -105,6 +106,12 @@ export function ShortcutConfig(props: {
       name: 'quickToggle',
       keys: shortcuts.quickToggle,
       options: shortcutToggleWindowValues,
+    },
+    {
+      label: t('Screenshot'),
+      name: 'screenshot',
+      keys: shortcuts.screenshot,
+      options: shortcutScreenshotValues,
     },
     {
       label: t('Focus on the Input Box'),

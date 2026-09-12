@@ -749,7 +749,6 @@
   "Please enter your email address": "Vennligst oppgi e-postadressen din",
   "Please log in to Chatbox AI first": "Vennligst logg inn på Chatbox AI først",
   "Please select a model": "Vennligst velg en modell",
-  "Please test before saving": "Vennligst test før lagring",
   "Popular": "Populær",
   "Popular Skills": "Populære ferdigheter",
   "Preparing": "Forbereder",
@@ -970,7 +969,6 @@
   "Temperature": "Temperatur",
   "Terminal": "Terminal",
   "Terms of Service": "Vilkår for bruk",
-  "Test": "Test",
   "Test Connection": "Test tilkobling",
   "Test failed": "Test mislyktes",
   "Test Model": "Test modell",
@@ -1282,5 +1280,15 @@
   "Long tasks pause for confirmation after every {{count}} steps so you can check they're on track. Individual chats can override this in their conversation settings.": "Lange oppgaver pauses hvert {{count}}. trinn for bekreftelse, slik at du kan sjekke at de er på rett spor. Enkeltchatter kan overstyre dette i samtaleinnstillingene sine.",
   "{{count}} operation(s) awaiting approval": "{{count}} operasjon(er) venter på godkjenning",
   "X-High": "Svært høy",
-  "Max": "Maks"
+  "Max": "Maks",
+  "Protocol": "Protokoll",
+  "Auto (recommended)": "Automatisk (anbefalt)",
+  "Legacy": "Eldre",
+  "If you're unsure, keep Auto. Choose Legacy only if you know the server does not support stateless MCP.": "Hvis du er usikker, behold Automatisk. Velg Eldre bare hvis du vet at serveren ikke støtter tilstandsløs MCP.",
+  "Connect": "Koble til",
+  "Please connect before saving": "Koble til før du lagrer",
+  "Authorization required. Open this server in MCP settings and click Connect to sign in.": "Godkjenning kreves. Åpne denne serveren i MCP-innstillingene og klikk Koble til for å logge inn.",
+  "Screenshot": "Skjermbilde",
+  "Take Screenshot": "Ta skjermbilde",
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "Ta bilde av ethvert skjermområde til utklippstavlen. Du kan også trykke Ctrl+Alt+X hvor som helst."
 }

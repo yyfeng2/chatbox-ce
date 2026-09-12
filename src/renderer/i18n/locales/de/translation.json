@@ -749,7 +749,6 @@
   "Please enter your email address": "Bitte geben Sie Ihre E-Mail-Adresse ein",
   "Please log in to Chatbox AI first": "Bitte melden Sie sich zuerst bei Chatbox AI an",
   "Please select a model": "Bitte wählen Sie ein Modell aus",
-  "Please test before saving": "Bitte vor dem Speichern testen",
   "Popular": "Beliebt",
   "Popular Skills": "Beliebte Skills",
   "Preparing": "Wird vorbereitet",
@@ -970,7 +969,6 @@
   "Temperature": "Temperatur",
   "Terminal": "Terminal",
   "Terms of Service": "Nutzungsbedingungen",
-  "Test": "Testen",
   "Test Connection": "Verbindung testen",
   "Test failed": "Test fehlgeschlagen",
   "Test Model": "Modell testen",
@@ -1282,5 +1280,15 @@
   "Long tasks pause for confirmation after every {{count}} steps so you can check they're on track. Individual chats can override this in their conversation settings.": "Lange Aufgaben pausieren alle {{count}} Schritte zur Bestätigung, damit du prüfen kannst, ob alles auf Kurs ist. Einzelne Chats können dies in ihren Konversationseinstellungen überschreiben.",
   "{{count}} operation(s) awaiting approval": "{{count}} Vorgang/Vorgänge warten auf Genehmigung",
   "X-High": "Sehr hoch",
-  "Max": "Maximal"
+  "Max": "Maximal",
+  "Protocol": "Protokoll",
+  "Auto (recommended)": "Auto (empfohlen)",
+  "Legacy": "Klassisch",
+  "If you're unsure, keep Auto. Choose Legacy only if you know the server does not support stateless MCP.": "Wenn Sie unsicher sind, belassen Sie es bei Auto. Wählen Sie Klassisch nur, wenn Sie wissen, dass der Server kein zustandsloses MCP unterstützt.",
+  "Connect": "Verbinden",
+  "Please connect before saving": "Bitte vor dem Speichern verbinden",
+  "Authorization required. Open this server in MCP settings and click Connect to sign in.": "Autorisierung erforderlich. Öffnen Sie diesen Server in den MCP-Einstellungen und klicken Sie auf Verbinden, um sich anzumelden.",
+  "Screenshot": "Screenshot",
+  "Take Screenshot": "Screenshot aufnehmen",
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "Nehmen Sie einen beliebigen Bildschirmbereich in die Zwischenablage auf. Sie können auch überall Strg+Alt+X drücken."
 }

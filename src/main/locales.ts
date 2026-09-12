@@ -27,6 +27,10 @@ const translations = {
     en: 'Show/Hide',
     zh: '显示/隐藏',
   },
+  'Take Screenshot': {
+    en: 'Take Screenshot',
+    zh: '开始截图',
+  },
   Exit: {
     en: 'Exit',
     zh: '退出',

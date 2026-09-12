@@ -243,6 +243,10 @@ export default defineConfig(({ mode }) => {
         sourcemap: isProduction ? 'hidden' : true,
         minify: isProduction ? 'esbuild' : false, // Use esbuild for faster, less memory-intensive minification
         rollupOptions: {
+          input: {
+            index: resolve(__dirname, 'src/renderer/index.html'),
+            capture: resolve(__dirname, 'src/renderer/capture.html'),
+          },
           output: {
             entryFileNames: 'js/[name].[hash].js',
             chunkFileNames: 'js/[name].[hash].js',

@@ -20,6 +20,7 @@ import {
   IconAlertCircle,
   IconArrowBackUp,
   IconArrowUp,
+  IconCamera,
   IconChevronRight,
   IconCirclePlus,
   IconFilePencil,
@@ -1742,6 +1743,21 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
                   compact={isSmallScreen}
                   onChange={(level) => void handleReasoningLevelChange(level)}
                 />
+
+                {platform.type === 'desktop' && (
+                  <Tooltip label={t('Screenshot')} position="top" withArrow>
+                    <UnstyledButton
+                      onClick={() => void window.electronAPI.invoke('capture:start')}
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-[var(--chatbox-background-tertiary)] transition-colors"
+                    >
+                      <IconCamera
+                        size={toolbarIconSize}
+                        strokeWidth={1.8}
+                        className="text-[var(--chatbox-tint-secondary)]"
+                      />
+                    </UnstyledButton>
+                  </Tooltip>
+                )}
 
                 {/* Agent Mode Panel - desktop only */}
                 {platform.type === 'desktop' && (

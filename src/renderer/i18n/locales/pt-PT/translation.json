@@ -749,7 +749,6 @@
   "Please enter your email address": "Por favor, introduza o seu endereço de e-mail",
   "Please log in to Chatbox AI first": "Por favor, inicie sessão no Chatbox AI primeiro",
   "Please select a model": "Por favor, selecione um modelo",
-  "Please test before saving": "Por favor, teste antes de guardar",
   "Popular": "Popular",
   "Popular Skills": "Competências Populares",
   "Preparing": "A preparar",
@@ -970,7 +969,6 @@
   "Temperature": "Temperatura",
   "Terminal": "Terminal",
   "Terms of Service": "Termos de Serviço",
-  "Test": "Testar",
   "Test Connection": "Testar Ligação",
   "Test failed": "Falha no teste",
   "Test Model": "Testar Modelo",
@@ -1282,5 +1280,15 @@
   "Long tasks pause for confirmation after every {{count}} steps so you can check they're on track. Individual chats can override this in their conversation settings.": "As tarefas longas são pausadas a cada {{count}} passos para confirmação, para que possa verificar se estão no caminho certo. Cada conversa pode substituir esta opção nas suas definições de conversa.",
   "{{count}} operation(s) awaiting approval": "{{count}} operação(ões) à espera de aprovação",
   "X-High": "Muito alto",
-  "Max": "Máximo"
+  "Max": "Máximo",
+  "Protocol": "Protocolo",
+  "Auto (recommended)": "Automático (recomendado)",
+  "Legacy": "Herdado",
+  "If you're unsure, keep Auto. Choose Legacy only if you know the server does not support stateless MCP.": "Se não tiver certeza, mantenha Automático. Escolha Herdado apenas se souber que o servidor não suporta MCP sem estado.",
+  "Connect": "Conectar",
+  "Please connect before saving": "Conecte antes de salvar",
+  "Authorization required. Open this server in MCP settings and click Connect to sign in.": "Autorização necessária. Abra este servidor nas configurações de MCP e clique em Conectar para entrar.",
+  "Screenshot": "Captura de ecrã",
+  "Take Screenshot": "Capturar ecrã",
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "Capture qualquer região do ecrã para a área de transferência. Também pode premir Ctrl+Alt+X em qualquer lugar."
 }

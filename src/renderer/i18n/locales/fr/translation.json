@@ -749,7 +749,6 @@
   "Please enter your email address": "Veuillez saisir votre adresse e-mail",
   "Please log in to Chatbox AI first": "Veuillez d'abord vous connecter à Chatbox AI",
   "Please select a model": "Veuillez sélectionner un modèle",
-  "Please test before saving": "Veuillez tester avant d'enregistrer",
   "Popular": "Populaire",
   "Popular Skills": "Compétences populaires",
   "Preparing": "Préparation",
@@ -970,7 +969,6 @@
   "Temperature": "Température",
   "Terminal": "Terminal",
   "Terms of Service": "Conditions d'utilisation",
-  "Test": "Tester",
   "Test Connection": "Tester la connexion",
   "Test failed": "Échec du test",
   "Test Model": "Tester le modèle",
@@ -1282,5 +1280,15 @@
   "Long tasks pause for confirmation after every {{count}} steps so you can check they're on track. Individual chats can override this in their conversation settings.": "Les tâches longues se mettent en pause toutes les {{count}} étapes pour confirmation, afin de vérifier qu'elles sont sur la bonne voie. Chaque discussion peut remplacer ce réglage dans ses paramètres de conversation.",
   "{{count}} operation(s) awaiting approval": "{{count}} opération(s) en attente d'approbation",
   "X-High": "Très élevé",
-  "Max": "Maximum"
+  "Max": "Maximum",
+  "Protocol": "Protocole",
+  "Auto (recommended)": "Automatique (recommandé)",
+  "Legacy": "Hérité",
+  "If you're unsure, keep Auto. Choose Legacy only if you know the server does not support stateless MCP.": "En cas de doute, conservez Automatique. Ne choisissez Hérité que si vous savez que le serveur ne prend pas en charge MCP sans état.",
+  "Connect": "Se connecter",
+  "Please connect before saving": "Veuillez vous connecter avant d'enregistrer",
+  "Authorization required. Open this server in MCP settings and click Connect to sign in.": "Autorisation requise. Ouvrez ce serveur dans les paramètres MCP et cliquez sur Se connecter pour vous connecter.",
+  "Screenshot": "Capture d'écran",
+  "Take Screenshot": "Prendre une capture d'écran",
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "Capturez n'importe quelle zone de l'écran vers le presse-papiers. Vous pouvez également appuyer sur Ctrl+Alt+X n'importe où."
 }

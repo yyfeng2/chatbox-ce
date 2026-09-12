@@ -749,7 +749,6 @@
   "Please enter your email address": "Inserisci il tuo indirizzo email",
   "Please log in to Chatbox AI first": "Accedi prima a Chatbox AI",
   "Please select a model": "Seleziona un modello",
-  "Please test before saving": "Si prega di testare prima di salvare",
   "Popular": "Popolari",
   "Popular Skills": "Skill popolari",
   "Preparing": "Preparazione",
@@ -970,7 +969,6 @@
   "Temperature": "Temperatura",
   "Terminal": "Terminale",
   "Terms of Service": "Termini di servizio",
-  "Test": "Test",
   "Test Connection": "Test connessione",
   "Test failed": "Test fallito",
   "Test Model": "Test modello",
@@ -1282,5 +1280,15 @@
   "Long tasks pause for confirmation after every {{count}} steps so you can check they're on track. Individual chats can override this in their conversation settings.": "Le attività lunghe si mettono in pausa ogni {{count}} passaggi per chiedere conferma, così puoi verificare che siano sulla buona strada. Ogni chat può modificare questa opzione nelle proprie impostazioni della conversazione.",
   "{{count}} operation(s) awaiting approval": "{{count}} operazione/i in attesa di approvazione",
   "X-High": "Molto alto",
-  "Max": "Massimo"
+  "Max": "Massimo",
+  "Protocol": "Protocollo",
+  "Auto (recommended)": "Automatico (consigliato)",
+  "Legacy": "Classico",
+  "If you're unsure, keep Auto. Choose Legacy only if you know the server does not support stateless MCP.": "In caso di dubbio, mantieni Automatico. Scegli Classico solo se sai che il server non supporta MCP senza stato.",
+  "Connect": "Connetti",
+  "Please connect before saving": "Connetti prima di salvare",
+  "Authorization required. Open this server in MCP settings and click Connect to sign in.": "Autorizzazione richiesta. Apri questo server nelle impostazioni MCP e fai clic su Connetti per accedere.",
+  "Screenshot": "Screenshot",
+  "Take Screenshot": "Acquisisci screenshot",
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "Acquisisci qualsiasi area dello schermo negli appunti. Puoi anche premere Ctrl+Alt+X in qualsiasi momento."
 }

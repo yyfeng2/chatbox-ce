@@ -749,7 +749,6 @@
   "Please enter your email address": "Please enter your email address",
   "Please log in to Chatbox AI first": "Please log in to Chatbox AI first",
   "Please select a model": "Please select a model",
-  "Please test before saving": "Please test before saving",
   "Popular": "Popular",
   "Popular Skills": "Popular Skills",
   "Preparing": "Preparing",
@@ -970,7 +969,6 @@
   "Temperature": "Temperature",
   "Terminal": "Terminal",
   "Terms of Service": "Terms of Service",
-  "Test": "Test",
   "Test Connection": "Test Connection",
   "Test failed": "Test failed",
   "Test Model": "Test Model",
@@ -1282,5 +1280,15 @@
   "Long tasks pause for confirmation after every {{count}} steps so you can check they're on track. Individual chats can override this in their conversation settings.": "Long tasks pause for confirmation after every {{count}} steps so you can check they're on track. Individual chats can override this in their conversation settings.",
   "{{count}} operation(s) awaiting approval": "{{count}} operation(s) awaiting approval",
   "X-High": "X-High",
-  "Max": "Max"
+  "Max": "Max",
+  "Protocol": "Protocol",
+  "Auto (recommended)": "Auto (recommended)",
+  "Legacy": "Legacy",
+  "If you're unsure, keep Auto. Choose Legacy only if you know the server does not support stateless MCP.": "If you're unsure, keep Auto. Choose Legacy only if you know the server does not support stateless MCP.",
+  "Connect": "Connect",
+  "Please connect before saving": "Please connect before saving",
+  "Authorization required. Open this server in MCP settings and click Connect to sign in.": "Authorization required. Open this server in MCP settings and click Connect to sign in.",
+  "Screenshot": "Screenshot",
+  "Take Screenshot": "Take Screenshot",
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere."
 }

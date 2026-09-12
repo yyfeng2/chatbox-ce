@@ -8,6 +8,7 @@ import type {
   OAuthStartResult,
 } from '@shared/oauth'
 import { OAuthIpcChannels } from '@shared/oauth'
+import { createCallbackServer } from './callback-server'
 import { anthropicOAuthProvider } from './providers/anthropic'
 import { githubCopilotOAuthProvider } from './providers/github-copilot'
 import { minimaxCnOAuthProvider, minimaxOAuthProvider } from './providers/minimax'
@@ -268,6 +269,25 @@ export function registerOAuthHandlers(): void {
       }
     }
   )
+
+  // MCP servers run their OAuth flow in the renderer; main only owns the loopback port that
+  // receives the browser redirect. A new wait replaces any pending one so retries never hit EADDRINUSE.
+  let mcpCallbackFlow: AbortController | null = null
+  ipcMain.handle(OAuthIpcChannels.MCP_WAIT_CALLBACK, async (_event, port: number): Promise<string> => {
+    mcpCallbackFlow?.abort()
+    await new Promise((resolve) => setImmediate(resolve))
+    const controller = new AbortController()
+    mcpCallbackFlow = controller
+    try {
+      log.info(`[OAuth] Waiting for MCP authorization callback on port ${port}`)
+      const { code } = await createCallbackServer(port, controller.signal).promise
+      return code
+    } finally {
+      if (mcpCallbackFlow === controller) {
+        mcpCallbackFlow = null
+      }
+    }
+  })
 
   log.info('[OAuth] IPC handlers registered')
 }

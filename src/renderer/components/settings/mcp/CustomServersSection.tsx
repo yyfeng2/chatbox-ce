@@ -100,6 +100,7 @@ const CustomServersSection: FC<Props> = (props) => {
           id: uuid(),
           name: entry.title,
           enabled: true,
+          protocolMode: 'auto',
           transport: {
             type: 'stdio',
             command: entry.configuration.command,
@@ -115,6 +116,7 @@ const CustomServersSection: FC<Props> = (props) => {
           id: uuid(),
           name: '',
           enabled: true,
+          protocolMode: 'auto',
           transport: { type: 'http', url: '' },
         },
       })

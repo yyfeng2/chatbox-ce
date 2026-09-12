@@ -749,7 +749,6 @@
   "Please enter your email address": "Por favor, introduce tu dirección de correo electrónico",
   "Please log in to Chatbox AI first": "Por favor, inicia sesión en Chatbox AI primero",
   "Please select a model": "Por favor, selecciona un modelo",
-  "Please test before saving": "Por favor, realice una prueba antes de guardar",
   "Popular": "Popular",
   "Popular Skills": "Habilidades populares",
   "Preparing": "Preparando",
@@ -970,7 +969,6 @@
   "Temperature": "Temperatura",
   "Terminal": "Terminal",
   "Terms of Service": "Términos de servicio",
-  "Test": "Probar",
   "Test Connection": "Probar conexión",
   "Test failed": "Prueba fallida",
   "Test Model": "Probar modelo",
@@ -1282,5 +1280,15 @@
   "Long tasks pause for confirmation after every {{count}} steps so you can check they're on track. Individual chats can override this in their conversation settings.": "Las tareas largas se pausan cada {{count}} pasos para pedir confirmación, así puedes comprobar que van por buen camino. Cada chat puede cambiarlo en sus ajustes de conversación.",
   "{{count}} operation(s) awaiting approval": "{{count}} operación(es) en espera de aprobación",
   "X-High": "Muy alto",
-  "Max": "Máximo"
+  "Max": "Máximo",
+  "Protocol": "Protocolo",
+  "Auto (recommended)": "Automático (recomendado)",
+  "Legacy": "Heredado",
+  "If you're unsure, keep Auto. Choose Legacy only if you know the server does not support stateless MCP.": "Si no está seguro, mantenga Automático. Elija Heredado solo si sabe que el servidor no es compatible con MCP sin estado.",
+  "Connect": "Conectar",
+  "Please connect before saving": "Conecte antes de guardar",
+  "Authorization required. Open this server in MCP settings and click Connect to sign in.": "Autorización requerida. Abra este servidor en la configuración de MCP y haga clic en Conectar para iniciar sesión.",
+  "Screenshot": "Captura de pantalla",
+  "Take Screenshot": "Tomar captura de pantalla",
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "Capture cualquier región de la pantalla en el portapapeles. También puede pulsar Ctrl+Alt+X en cualquier lugar."
 }

@@ -749,7 +749,6 @@
   "Please enter your email address": "이메일 주소를 입력해주세요",
   "Please log in to Chatbox AI first": "먼저 Chatbox AI에 로그인하세요",
   "Please select a model": "모델을 선택하세요",
-  "Please test before saving": "저장하기 전에 테스트하십시오",
   "Popular": "인기 항목",
   "Popular Skills": "인기 스킬",
   "Preparing": "준비 중",
@@ -970,7 +969,6 @@
   "Temperature": "Temperature",
   "Terminal": "터미널",
   "Terms of Service": "서비스 약관",
-  "Test": "테스트",
   "Test Connection": "연결 테스트",
   "Test failed": "테스트 실패",
   "Test Model": "모델 테스트",
@@ -1282,5 +1280,15 @@
   "Long tasks pause for confirmation after every {{count}} steps so you can check they're on track. Individual chats can override this in their conversation settings.": "긴 작업은 {{count}}단계마다 일시 중지되어 확인을 요청하므로 작업이 올바르게 진행되고 있는지 확인할 수 있습니다. 각 채팅의 대화 설정에서 개별적으로 변경할 수 있습니다.",
   "{{count}} operation(s) awaiting approval": "{{count}}개의 작업이 승인 대기 중",
   "X-High": "매우 높음",
-  "Max": "최대"
+  "Max": "최대",
+  "Protocol": "프로토콜",
+  "Auto (recommended)": "자동(권장)",
+  "Legacy": "레거시",
+  "If you're unsure, keep Auto. Choose Legacy only if you know the server does not support stateless MCP.": "확실하지 않으면 자동을 유지하세요. 서버가 스테이트리스 MCP를 지원하지 않는다는 것을 아는 경우에만 레거시를 선택하세요.",
+  "Connect": "연결",
+  "Please connect before saving": "저장하기 전에 연결하세요",
+  "Authorization required. Open this server in MCP settings and click Connect to sign in.": "인증이 필요합니다. MCP 설정에서 이 서버를 연 후 연결을 클릭하여 로그인하세요.",
+  "Screenshot": "스크린샷",
+  "Take Screenshot": "스크린샷 찍기",
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "화면의 모든 영역을 클립보드로 캡처합니다. 어디서든 Ctrl+Alt+X를 누를 수도 있습니다."
 }

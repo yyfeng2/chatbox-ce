@@ -96,6 +96,7 @@ describe('defaults', () => {
         'optionNavUp',
         'optionNavDown',
         'optionSelect',
+        'screenshot',
       ].sort()
     )
     expect(result.messageListRefreshContext).toBe('mod+shift+n')

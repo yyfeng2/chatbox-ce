@@ -749,7 +749,6 @@
   "Please enter your email address": "Vänligen ange din e-postadress",
   "Please log in to Chatbox AI first": "Vänligen logga in på Chatbox AI först",
   "Please select a model": "Vänligen välj en modell",
-  "Please test before saving": "Vänligen testa innan du sparar",
   "Popular": "Populära",
   "Popular Skills": "Populära färdigheter",
   "Preparing": "Förbereder",
@@ -970,7 +969,6 @@
   "Temperature": "Temperatur",
   "Terminal": "Terminal",
   "Terms of Service": "Användarvillkor",
-  "Test": "Testa",
   "Test Connection": "Testa anslutning",
   "Test failed": "Testet misslyckades",
   "Test Model": "Testa modell",
@@ -1282,5 +1280,15 @@
   "Long tasks pause for confirmation after every {{count}} steps so you can check they're on track. Individual chats can override this in their conversation settings.": "Långa uppgifter pausas var {{count}}:e steg för bekräftelse, så att du kan kontrollera att de är på rätt spår. Enskilda chattar kan åsidosätta detta i sina konversationsinställningar.",
   "{{count}} operation(s) awaiting approval": "{{count}} åtgärd(er) väntar på godkännande",
   "X-High": "Mycket hög",
-  "Max": "Max"
+  "Max": "Max",
+  "Protocol": "Protokoll",
+  "Auto (recommended)": "Automatiskt (rekommenderas)",
+  "Legacy": "Äldre",
+  "If you're unsure, keep Auto. Choose Legacy only if you know the server does not support stateless MCP.": "Om du är osäker, behåll Automatiskt. Välj Äldre bara om du vet att servern inte stöder tillståndslös MCP.",
+  "Connect": "Anslut",
+  "Please connect before saving": "Anslut innan du sparar",
+  "Authorization required. Open this server in MCP settings and click Connect to sign in.": "Auktorisering krävs. Öppna den här servern i MCP-inställningarna och klicka på Anslut för att logga in.",
+  "Screenshot": "Skärmdump",
+  "Take Screenshot": "Ta skärmdump",
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "Fånga valt skärmonråde till urklipp. Du kan också trycka Ctrl+Alt+X var som helst."
 }

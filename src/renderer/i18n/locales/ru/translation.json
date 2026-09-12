@@ -1290,5 +1290,6 @@
   "Authorization required. Open this server in MCP settings and click Connect to sign in.": "Требуется авторизация. Откройте этот сервер в настройках MCP и нажмите Подключиться, чтобы войти.",
   "Screenshot": "Скриншот",
   "Take Screenshot": "Сделать скриншот",
-  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "Сделайте снимок любой области экрана в буфер обмена. Вы также можете нажать Ctrl+Alt+X в любом месте."
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "Сделайте снимок любой области экрана в буфер обмена. Вы также можете нажать Ctrl+Alt+X в любом месте.",
+  "Take Photo": "Сделать фото"
 }

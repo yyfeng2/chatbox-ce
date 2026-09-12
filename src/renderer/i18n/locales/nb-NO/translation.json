@@ -1290,5 +1290,6 @@
   "Authorization required. Open this server in MCP settings and click Connect to sign in.": "Godkjenning kreves. Åpne denne serveren i MCP-innstillingene og klikk Koble til for å logge inn.",
   "Screenshot": "Skjermbilde",
   "Take Screenshot": "Ta skjermbilde",
-  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "Ta bilde av ethvert skjermområde til utklippstavlen. Du kan også trykke Ctrl+Alt+X hvor som helst."
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "Ta bilde av ethvert skjermområde til utklippstavlen. Du kan også trykke Ctrl+Alt+X hvor som helst.",
+  "Take Photo": "Ta bilde"
 }

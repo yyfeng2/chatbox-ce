@@ -1256,6 +1256,31 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     const onFileUploadClick = () => {
       fileInputRef.current?.click()
     }
+    // Android/iOS: capture a photo with the device camera and feed it through the
+    // same image pipeline as file uploads.
+    const onCameraCaptureClick = async () => {
+      if (platform.type !== 'mobile') return
+      try {
+        const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera')
+        const photo = await Camera.getPhoto({
+          quality: 90,
+          resultType: CameraResultType.Base64,
+          source: CameraSource.Camera,
+          width: 1600,
+        })
+        if (!photo.base64String) return
+        const byteString = atob(photo.base64String)
+        const bytes = new Uint8Array(byteString.length)
+        for (let i = 0; i < byteString.length; i++) {
+          bytes[i] = byteString.charCodeAt(i)
+        }
+        const file = new File([bytes], `camera-${Date.now()}.jpg`, { type: 'image/jpeg' })
+        insertFiles([file])
+        dom.focusMessageInput()
+      } catch (e) {
+        console.error('Camera capture failed:', e)
+      }
+    }
 
     const onImageDeleteClick = async (picKey: string) => {
       setPreConstructedMessage((prev) => ({
@@ -1710,7 +1735,12 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
 
               {/* Left Group: Tool Buttons */}
               <Flex align="center" gap={0}>
-                <AttachmentMenu onImageUploadClick={onImageUploadClick} onFileUploadClick={onFileUploadClick} t={t} />
+                <AttachmentMenu
+                  onImageUploadClick={onImageUploadClick}
+                  onFileUploadClick={onFileUploadClick}
+                  onCameraCaptureClick={onCameraCaptureClick}
+                  t={t}
+                />
 
                 {/* Desktop owns Web Search in AgentModePanel for both Chat and Work modes.
                     Mobile/Web keep this standalone entry because they do not render that panel. */}
@@ -1988,8 +2018,9 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
 const AttachmentMenu: React.FC<{
   onImageUploadClick: () => void
   onFileUploadClick: () => void
+  onCameraCaptureClick: () => void
   t: (key: string) => string
-}> = ({ onImageUploadClick, onFileUploadClick, t }) => {
+}> = ({ onImageUploadClick, onFileUploadClick, onCameraCaptureClick, t }) => {
   const isSmallScreen = useIsSmallScreen()
   const toolbarIconSize = isSmallScreen ? 22 : 18
   return (
@@ -2021,6 +2052,11 @@ const AttachmentMenu: React.FC<{
         >
           {t('Attach Image')}
         </Menu.Item>
+        {platform.type === 'mobile' && (
+          <Menu.Item leftSection={<IconCamera size={16} />} onClick={onCameraCaptureClick}>
+            {t('Take Photo')}
+          </Menu.Item>
+        )}
         <Menu.Item
           data-testid={TestId.chat.attachmentSelectFile}
           leftSection={<IconFolder size={16} />}

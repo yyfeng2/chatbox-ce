@@ -1290,5 +1290,6 @@
   "Authorization required. Open this server in MCP settings and click Connect to sign in.": "مطلوب التفويض. افتح هذا الخادم في إعدادات MCP وانقر على اتصال لتسجيل الدخول.",
   "Screenshot": "لقطة شاشة",
   "Take Screenshot": "التقاط لقطة شاشة",
-  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "التقاط أي منطقة من الشاشة إلى الحافظة. يمكنك أيضاً الضغط على Ctrl+Alt+X في أي مكان."
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "التقاط أي منطقة من الشاشة إلى الحافظة. يمكنك أيضاً الضغط على Ctrl+Alt+X في أي مكان.",
+  "Take Photo": "التقاط صورة"
 }

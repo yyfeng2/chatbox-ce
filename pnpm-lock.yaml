@@ -29,6 +29,9 @@ importers:
 
   .:
     dependencies:
+      '@capacitor/camera':
+        specifier: ^7.0.0
+        version: 7.0.5(@capacitor/core@7.4.5)
       '@libsql/client':
         specifier: ^0.15.6
         version: 0.15.15
@@ -1683,6 +1686,11 @@ packages:
 
   '@capacitor/browser@7.0.3':
     resolution: {integrity: sha512-PTHG+rj6Sz/6xXOmCs5sQXYDDueD6uv7p/bXOpdNlvV6Dv6yAOlZ85cu0sEggcGzXRW4PZXx/PvCOZasznsTTg==}
+    peerDependencies:
+      '@capacitor/core': '>=7.0.0'
+
+  '@capacitor/camera@7.0.5':
+    resolution: {integrity: sha512-+53f1xHq8on7O+ULXbgWp00ooWvn3fUkWxTP3p5zHi1nVriCxLbYnY0zTpZQqn52M96vclFKkoABbTVQ3x755w==}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
@@ -13986,6 +13994,10 @@ snapshots:
       - typescript
 
   '@capacitor/browser@7.0.3(@capacitor/core@7.4.5)':
+    dependencies:
+      '@capacitor/core': 7.4.5
+
+  '@capacitor/camera@7.0.5(@capacitor/core@7.4.5)':
     dependencies:
       '@capacitor/core': 7.4.5
 

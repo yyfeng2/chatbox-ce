@@ -1290,5 +1290,6 @@
   "Authorization required. Open this server in MCP settings and click Connect to sign in.": "Autorización requerida. Abra este servidor en la configuración de MCP y haga clic en Conectar para iniciar sesión.",
   "Screenshot": "Captura de pantalla",
   "Take Screenshot": "Tomar captura de pantalla",
-  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "Capture cualquier región de la pantalla en el portapapeles. También puede pulsar Ctrl+Alt+X en cualquier lugar."
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "Capture cualquier región de la pantalla en el portapapeles. También puede pulsar Ctrl+Alt+X en cualquier lugar.",
+  "Take Photo": "Tomar foto"
 }

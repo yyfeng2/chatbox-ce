@@ -451,8 +451,14 @@ export function RouteComponent() {
 
       <Divider />
 
-      {/* Screenshot */}
-      <ScreenshotSection />
+      {/* Screenshot (desktop only — screen capture relies on Electron APIs) */}
+      {platform.type === 'desktop' && (
+        <>
+          <Divider />
+
+          <ScreenshotSection />
+        </>
+      )}
 
       <Divider />
 

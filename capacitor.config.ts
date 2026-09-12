@@ -14,7 +14,6 @@ const config: CapacitorConfig = {
   plugins: {
     SplashScreen: {
       launchShowDuration: 1500,
-      scaleEnabled: false,
     },
   },
 }

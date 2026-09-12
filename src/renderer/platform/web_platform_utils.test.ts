@@ -41,13 +41,29 @@ describe('parseFileLocallyInBrowser', () => {
   })
 
   it('returns unsupported for non-text non-PDF files', async () => {
-    const file = new File(['docx'], 'paper.docx', {
+    const file = new File(['binary data'], 'paper.bin', { type: 'application/octet-stream' })
+
+    const result = await parseFileLocallyInBrowser(file)
+
+    expect(result).toEqual({ text: '', isSupported: false })
+    expect(mockParsePdfFileLocally).not.toHaveBeenCalled()
+  })
+
+  it('parses Office documents with jszip', async () => {
+    const JSZip = (await import('jszip')).default
+    const zip = new JSZip()
+    zip.file(
+      'word/document.xml',
+      '<?xml version="1.0"?><w:document><w:body><w:p><w:t>hello docx</w:t></w:p></w:body></w:document>'
+    )
+    const buffer = await zip.generateAsync({ type: 'arraybuffer' })
+    const file = new File([buffer], 'paper.docx', {
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     })
 
     const result = await parseFileLocallyInBrowser(file)
 
-    expect(result).toEqual({ text: '', isSupported: false })
+    expect(result).toEqual({ text: 'hello docx', isSupported: true })
     expect(mockParsePdfFileLocally).not.toHaveBeenCalled()
   })
 

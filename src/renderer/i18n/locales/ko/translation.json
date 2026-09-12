@@ -1290,5 +1290,6 @@
   "Authorization required. Open this server in MCP settings and click Connect to sign in.": "인증이 필요합니다. MCP 설정에서 이 서버를 연 후 연결을 클릭하여 로그인하세요.",
   "Screenshot": "스크린샷",
   "Take Screenshot": "스크린샷 찍기",
-  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "화면의 모든 영역을 클립보드로 캡처합니다. 어디서든 Ctrl+Alt+X를 누를 수도 있습니다."
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "화면의 모든 영역을 클립보드로 캡처합니다. 어디서든 Ctrl+Alt+X를 누를 수도 있습니다.",
+  "Take Photo": "사진 찍기"
 }

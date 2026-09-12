@@ -1,6 +1,7 @@
 import { App } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
 import { Device } from '@capacitor/device'
+import { Toast } from '@capacitor/toast'
 import * as defaults from '@shared/defaults'
 import type { Config, Settings, ShortcutSetting } from '@shared/types'
 import localforage from 'localforage'
@@ -36,6 +37,35 @@ export default class MobilePlatform extends MobileSQLiteStorage implements Platf
     App.addListener('appUrlOpen', (event) => {
       console.debug('App URL opened:', event.url)
       this.handleDeepLink(event.url)
+    })
+    this.setupAndroidBackButton()
+  }
+
+  /**
+   * 安卓物理返回键处理：注册后默认行为（直接退出 activity）被接管。
+   * 逐级回退（收起弹层/返回上一路由页），已在首页时 2 秒内连按两次退出。
+   */
+  private setupAndroidBackButton(): void {
+    if (CHATBOX_BUILD_PLATFORM !== 'android') {
+      return
+    }
+    let lastBackPress = 0
+    App.addListener('backButton', () => {
+      if (window.history.length > 1 && window.location.pathname !== '/') {
+        window.history.back()
+        return
+      }
+      const now = Date.now()
+      if (now - lastBackPress < 2000) {
+        void App.exitApp()
+        return
+      }
+      lastBackPress = now
+      const isCN = navigator.language.toLowerCase().startsWith('zh')
+      void Toast.show({
+        text: isCN ? '再按一次退出' : 'Press back again to exit',
+        duration: 'short',
+      })
     })
   }
 

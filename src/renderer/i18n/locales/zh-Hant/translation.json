@@ -1290,5 +1290,6 @@
   "Authorization required. Open this server in MCP settings and click Connect to sign in.": "需要授權。請在 MCP 設定中開啟此伺服器並點擊「連接」以登入。",
   "Screenshot": "截圖",
   "Take Screenshot": "開始截圖",
-  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "截取任意螢幕區域到剪貼簿，也可以隨時按 Ctrl+Alt+X。"
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "截取任意螢幕區域到剪貼簿，也可以隨時按 Ctrl+Alt+X。",
+  "Take Photo": "拍照"
 }

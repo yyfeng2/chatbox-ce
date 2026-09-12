@@ -51,6 +51,11 @@ export default function useVersion() {
       const settings = await platform.getSettings()
       const version = await platform.getVersion()
       _setVersion(version)
+      // Android APK builds never check for updates: the APK is distributed
+      // directly, so no in-app update prompt should appear.
+      if (CHATBOX_BUILD_PLATFORM === 'android') {
+        return
+      }
       try {
         const os = await platform.getPlatform()
         const needUpdate = await remote.checkNeedUpdate(version, os, config, settings)

@@ -1290,5 +1290,6 @@
   "Authorization required. Open this server in MCP settings and click Connect to sign in.": "認証が必要です。MCP 設定でこのサーバーを開き、「接続」をクリックしてサインインしてください。",
   "Screenshot": "スクリーンショット",
   "Take Screenshot": "スクリーンショットを撮る",
-  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "画面の任意の領域をクリップボードにキャプチャします。どこでも Ctrl+Alt+X を押すこともできます。"
+  "Capture any screen region to the clipboard. You can also press Ctrl+Alt+X anywhere.": "画面の任意の領域をクリップボードにキャプチャします。どこでも Ctrl+Alt+X を押すこともできます。",
+  "Take Photo": "写真を撮る"
 }

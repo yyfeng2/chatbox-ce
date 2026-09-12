@@ -18,11 +18,12 @@ const log = getLogger('settings-store')
 
 /**
  * Returns platform-specific default document parser configuration.
- * - Desktop: 'local' (has full Node.js environment for local parsing)
- * - Mobile/Web: 'chatbox-ai' (local-first parsing with Chatbox AI cloud fallback)
+ * All platforms use 'local': the browser-side parser covers text, PDF (pdfjs)
+ * and Office (jszip) on mobile/web, and desktop has the full Node.js parser.
+ * The removed 'chatbox-ai' cloud parser is no longer a valid default.
  */
 export function getPlatformDefaultDocumentParser(): DocumentParserConfig {
-  return platform.type === 'desktop' ? { type: 'local' } : { type: 'chatbox-ai' }
+  return { type: 'local' }
 }
 
 type Action = {

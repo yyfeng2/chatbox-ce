@@ -11,7 +11,9 @@ const ALL_PARSER_OPTIONS: {
   label: string
   desktopOnly?: boolean
 }[] = [
-  { value: 'local', label: 'Local', desktopOnly: true }, // Only available on desktop
+  // 'local' is available on mobile too: parseFileLocallyInBrowser covers text,
+  // PDF (pdfjs) and Office (jszip) in the browser.
+  { value: 'local', label: 'Local' },
   { value: 'mineru', label: 'MinerU', desktopOnly: true }, // Only available on desktop (requires IPC)
 ]
 

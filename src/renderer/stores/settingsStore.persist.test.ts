@@ -245,11 +245,11 @@ describe('settingsStore persistence', () => {
     expect(settingsStore.getState().shortcuts.newPictureChat).toBe('')
   })
 
-  it('uses Chatbox AI as the default document parser on web and mobile', async () => {
+  it('uses the local document parser as the default on all platforms', async () => {
     const webStore = await loadSettingsStoreModule(null, 'web')
-    expect(webStore.getPlatformDefaultDocumentParser()).toEqual({ type: 'chatbox-ai' })
+    expect(webStore.getPlatformDefaultDocumentParser()).toEqual({ type: 'local' })
 
     const mobileStore = await loadSettingsStoreModule(null, 'mobile')
-    expect(mobileStore.getPlatformDefaultDocumentParser()).toEqual({ type: 'chatbox-ai' })
+    expect(mobileStore.getPlatformDefaultDocumentParser()).toEqual({ type: 'local' })
   })
 })

@@ -15,6 +15,9 @@ overrides:
   shell-quote: 1.10.0
 
 patchedDependencies:
+  capacitor-stream-http:
+    hash: a354ce345022fad636d6f63b7634716231955bf44c0574e998e8a1cf220411bc
+    path: patches/capacitor-stream-http.patch
   fflate@0.8.3:
     hash: d911137eb72db9dddccc301e63a76bbc221a180ce91960f39a925726bf3bcba5
     path: patches/fflate@0.8.3.patch
@@ -422,7 +425,7 @@ importers:
         version: 4.0.3(@capacitor/core@7.4.5)
       capacitor-stream-http:
         specifier: ^0.1.0
-        version: 0.1.0(@capacitor/core@7.4.5)
+        version: 0.1.0(patch_hash=a354ce345022fad636d6f63b7634716231955bf44c0574e998e8a1cf220411bc)(@capacitor/core@7.4.5)
       chalk:
         specifier: ^4.1.2
         version: 4.1.2
@@ -19661,7 +19664,7 @@ snapshots:
     dependencies:
       '@capacitor/core': 7.4.5
 
-  capacitor-stream-http@0.1.0(@capacitor/core@7.4.5):
+  capacitor-stream-http@0.1.0(patch_hash=a354ce345022fad636d6f63b7634716231955bf44c0574e998e8a1cf220411bc)(@capacitor/core@7.4.5):
     dependencies:
       '@capacitor/core': 7.4.5
 

@@ -1,0 +1,56 @@
+diff --git a/android/src/main/java/com/chatbox/plugins/streamhttp/StreamHttpPlugin.java b/android/src/main/java/com/chatbox/plugins/streamhttp/StreamHttpPlugin.java
+index 19a911c5cd31293a177b4c5593c616c741c3d130..3c35feb8570127c286ac7218dfb5030a5536943b 100644
+--- a/android/src/main/java/com/chatbox/plugins/streamhttp/StreamHttpPlugin.java
++++ b/android/src/main/java/com/chatbox/plugins/streamhttp/StreamHttpPlugin.java
+@@ -15,6 +15,7 @@ import java.net.HttpURLConnection;
+ import java.net.URL;
+ import java.util.HashMap;
+ import java.util.Iterator;
++import java.util.List;
+ import java.util.Map;
+ import java.util.UUID;
+ import java.util.concurrent.ExecutorService;
+@@ -87,6 +88,22 @@ public class StreamHttpPlugin extends Plugin {
+                 int responseCode = connection.getResponseCode();
+                 Log.d(TAG, "Response code: " + responseCode);
+ 
++                // Report the real status/headers before any body data so the JS
++                // side can build a Response with the actual status instead of a
++                // hardcoded 200 (error masking fix).
++                JSObject statusData = new JSObject();
++                statusData.put("id", streamId);
++                statusData.put("status", responseCode);
++                JSObject statusHeaders = new JSObject();
++                for (Map.Entry<String, List<String>> field : connection.getHeaderFields().entrySet()) {
++                    String key = field.getKey();
++                    if (key != null && !field.getValue().isEmpty()) {
++                        statusHeaders.put(key, field.getValue().get(0));
++                    }
++                }
++                statusData.put("headers", statusHeaders);
++                notifyListeners("status", statusData);
++
+                 // Read response stream
+                 InputStream inputStream;
+                 if (responseCode >= 200 && responseCode < 300) {
+diff --git a/dist/esm/definitions.d.ts b/dist/esm/definitions.d.ts
+index ab47277ac40451a166db2d546d66ffae60e546b8..94c47d6892c8965beb42e783916ca3e93e71c56a 100644
+--- a/dist/esm/definitions.d.ts
++++ b/dist/esm/definitions.d.ts
+@@ -35,12 +35,14 @@ export interface StreamHttpPlugin {
+     }): Promise<void>;
+     /**
+      * Add a listener for stream events
+-     * @param eventName The event to listen for (chunk, end, or error)
++     * @param eventName The event to listen for (status, chunk, end, or error)
+      * @param listenerFunc Callback function for the event
+      * @returns Promise with remove function
+      */
+-    addListener(eventName: 'chunk' | 'end' | 'error', listenerFunc: (data: {
++    addListener(eventName: 'status' | 'chunk' | 'end' | 'error', listenerFunc: (data: {
+         id: string;
++        status?: number;
++        headers?: Record<string, string>;
+         chunk?: string;
+         error?: string;
+     }) => void): Promise<{

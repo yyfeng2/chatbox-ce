@@ -269,10 +269,12 @@
     "zustand": "^5.0.6"
   },
   "dependencies": {
+    "@capacitor/camera": "^7.0.0",
     "@libsql/client": "^0.15.6",
     "@mastra/core": "^0.13.2",
     "@mastra/libsql": "^0.13.2",
     "@mastra/rag": "^1.0.8",
+    "@modelcontextprotocol/client": "2.0.0",
     "@modelcontextprotocol/sdk": "^1.15.1",
     "@mozilla/readability": "^0.5.0",
     "@sentry/node": "^9.28.1",
@@ -294,9 +296,7 @@
     "officeparser": "5.0.0",
     "sanitize-filename": "^1.6.3",
     "ua-parser-js": "^2.0.10",
-    "uuid": "^9.0.0",
-    "@modelcontextprotocol/client": "2.0.0",
-    "@capacitor/camera": "^7.0.0"
+    "uuid": "^9.0.0"
   },
   "optionalDependencies": {
     "@rollup/rollup-darwin-arm64": "4.48.1",
@@ -336,6 +336,12 @@
       "convict": ">=6.2.5",
       "fast-xml-parser": ">=5.5.7",
       "shell-quote": "1.10.0"
+    },
+    "patchedDependencies": {
+      "fflate@0.8.3": "patches/fflate@0.8.3.patch",
+      "libsql@0.5.22": "patches/libsql@0.5.22.patch",
+      "mdast-util-gfm-autolink-literal@2.0.1": "patches/mdast-util-gfm-autolink-literal@2.0.1.patch",
+      "capacitor-stream-http": "patches/capacitor-stream-http.patch"
     }
   },
   "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319"

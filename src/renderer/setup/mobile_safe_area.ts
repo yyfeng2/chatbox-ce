@@ -40,25 +40,17 @@ SafeArea.getStatusBarHeight().then(({ statusBarHeight }) => {
   // eventListener.remove();
 })()
 
-// Android 15 (targetSdk 35) forces edge-to-edge: the legacy
-// windowSoftInputMode=adjustResize no longer compresses the view, so the
-// keyboard would cover the input. Use the reported keyboard height as the
-// bottom inset to keep the composer above the keyboard. iOS keeps 0px (its
-// webview resizes automatically; a nonzero value would double-pad).
-Keyboard.addListener('keyboardWillShow', async (info) => {
-  if (CHATBOX_BUILD_PLATFORM === 'android' && info.keyboardHeight > 0) {
-    setInset('bottom', info.keyboardHeight)
-    return
-  }
+// Android (with resizeOnFullScreen: true in capacitor.config) and iOS both
+// resize the webview natively when the keyboard shows; keep the bottom inset
+// at 0 while it is visible to avoid double-padding the composer.
+// keyboardWillShow does not fire on Android — keyboardDidShow is the reliable
+// event there.
+Keyboard.addListener('keyboardWillShow', async () => {
   document.documentElement.style.setProperty(`--mobile-safe-area-inset-bottom`, `0px`)
 })
 
-// Some Android keyboards report height 0 on keyboardWillShow; keyboardDidShow
-// fires once the height is known and covers that case.
-Keyboard.addListener('keyboardDidShow', async (info) => {
-  if (CHATBOX_BUILD_PLATFORM === 'android' && info.keyboardHeight > 0) {
-    setInset('bottom', info.keyboardHeight)
-  }
+Keyboard.addListener('keyboardDidShow', async () => {
+  document.documentElement.style.setProperty(`--mobile-safe-area-inset-bottom`, `0px`)
 })
 
 Keyboard.addListener('keyboardWillHide', () => {

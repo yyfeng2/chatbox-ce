@@ -21,6 +21,13 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 1500,
     },
+    Keyboard: {
+      // Android 15 forces edge-to-edge: the native Keyboard plugin resizes the
+      // webview container when the keyboard shows (the adjustResize equivalent),
+      // keeping the composer above the keyboard. Without this the keyboard
+      // covers the input.
+      resizeOnFullScreen: true,
+    },
   },
 }
 

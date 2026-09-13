@@ -52,11 +52,18 @@ export default class MobilePlatform extends MobileSQLiteStorage implements Platf
     }
     let lastBackPress = 0
     App.addListener('backButton', () => {
-      // Mantine 弹层不走浏览器 history：合成一次 Escape 按键让最上层的弹层
+      // Mantine 弹层不走浏览器 history：合成一次 Escape 按键让最上层的可见弹层
       // 自行关闭（Mantine 在 window 上注册 keydown 监听，capture 阶段触发）。
-      const overlay = document.querySelector('[role="dialog"], [role="menu"], [role="listbox"]')
-      if (overlay) {
-        overlay.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+      // 必须过滤不可见元素：Mantine 的 listbox/combobox 常驻 DOM（display:none），
+      // 无过滤时 Escape 永远命中隐藏元素，返回键对所有功能失效。
+      const overlays = Array.from(document.querySelectorAll('[role="dialog"], [role="menu"], [role="listbox"]'))
+      const visibleOverlay = overlays.find((el) => {
+        if (el.getClientRects().length === 0) return false
+        const style = getComputedStyle(el)
+        return style.display !== 'none' && style.visibility !== 'hidden'
+      })
+      if (visibleOverlay) {
+        visibleOverlay.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
         return
       }
       if (window.history.length > 1 && window.location.pathname !== '/') {

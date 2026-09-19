@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           # Reads the version from package.json packageManager; specifying one here
           # conflicts ("Multiple versions of pnpm specified").

@@ -50,7 +50,7 @@ jobs:
           cp android/app/build/outputs/apk/debug/app-debug.apk dist/Chatbox-1.31.0-debug.apk
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Chatbox-APK-debug
           path: dist/Chatbox-1.31.0-debug.apk
@@ -70,7 +70,7 @@ jobs:
       #     ./gradlew assembleRelease --no-daemon
       #
       # - name: Upload signed APK
-      #   uses: actions/upload-artifact@v4
+      #   uses: actions/upload-artifact@v7
       #   with:
       #     name: Chatbox-APK-release
       #     path: android/app/build/outputs/apk/release/*.apk

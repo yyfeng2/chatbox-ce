@@ -23,7 +23,7 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           # Capacitor 7 gradle templates compile with JavaVersion.VERSION_21.
